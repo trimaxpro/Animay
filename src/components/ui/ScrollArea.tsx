@@ -9,7 +9,7 @@ interface ScrollAreaProps {
 export function ScrollArea({ children, className }: ScrollAreaProps) {
   return (
     <ScrollAreaPrimitive.Root className={cn('relative overflow-hidden', className)}>
-      <ScrollAreaPrimitive.Viewport className="w-full h-full rounded-[inherit]">
+      <ScrollAreaPrimitive.Viewport className="w-full h-full rounded-[inherit] [&>div]:!pr-2.5">
         {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollAreaPrimitive.Scrollbar

@@ -87,7 +87,7 @@ export function FilterPanel({ filters, onChange, className }: FilterPanelProps) 
                 onClick={() => update({ status: filters.status === status ? '' : status })}
                 className={cn(
                   'px-3 py-1 rounded-input text-xs font-body transition-all',
-                  filters.status === status.toLowerCase()
+                    filters.status === status
                     ? 'bg-accent-primary/20 text-accent-glow border border-accent-primary/30'
                     : 'bg-elevated text-text-secondary border border-border-subtle hover:border-border-glow',
                 )}

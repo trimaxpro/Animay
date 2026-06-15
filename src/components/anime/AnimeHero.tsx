@@ -52,7 +52,7 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
               )}
               {anime.rank && <Badge variant="violet">Rank #{anime.rank}</Badge>}
               {anime.episodes && <Badge>{anime.episodes} Episodes</Badge>}
-              {anime.status && <Badge variant={anime.status === 'Currently Airing' ? 'rose' : 'default'}>{anime.status}</Badge>}
+              {anime.status && <Badge variant={['Currently Airing', 'Airing'].includes(anime.status) ? 'rose' : 'default'}>{anime.status}</Badge>}
               {anime.season && anime.year && <Badge>{anime.season} {anime.year}</Badge>}
               {anime.studios?.[0] && <Badge>{anime.studios[0].name}</Badge>}
             </div>

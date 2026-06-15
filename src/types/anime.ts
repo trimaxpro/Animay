@@ -1,5 +1,6 @@
 export interface Anime {
   mal_id: number;
+  anilist_id?: number;
   title: string;
   title_english: string | null;
   title_japanese: string | null;
@@ -48,7 +49,8 @@ export interface AnimeRelation {
 
 export interface Character {
   mal_id: number;
-  url: string;
+  anilist_id?: number;
+  url?: string;
   images: { jpg: { image_url: string } };
   name: string;
   role: 'Main' | 'Supporting';

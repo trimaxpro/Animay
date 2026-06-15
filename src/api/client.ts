@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export const apiClient = axios.create({
-  baseURL: `${supabaseUrl}/functions/v1/api`,
+  baseURL: API_BASE,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

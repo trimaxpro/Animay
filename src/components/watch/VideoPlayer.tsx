@@ -6,11 +6,12 @@ import { cn } from '@/utils/cn';
 
 interface VideoPlayerProps {
   src: string;
+  embedUrl?: string;
   onEnded?: () => void;
   skipTimes?: { type: string; startTime: number; endTime: number }[];
 }
 
-export function VideoPlayer({ src, onEnded, skipTimes }: VideoPlayerProps) {
+export function VideoPlayer({ src, embedUrl, onEnded, skipTimes }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -104,6 +105,20 @@ export function VideoPlayer({ src, onEnded, skipTimes }: VideoPlayerProps) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [togglePlay, toggleFullscreen, toggleMute]);
+
+  if (embedUrl) {
+    return (
+      <div className="relative bg-black rounded-hero overflow-hidden aspect-video border border-border-subtle">
+        <iframe
+          src={embedUrl}
+          className="w-full h-full"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          referrerPolicy="origin"
+        />
+      </div>
+    );
+  }
 
   const activeSkip = skipTimes?.find(
     (s) => store.currentTime >= s.startTime && store.currentTime < s.endTime

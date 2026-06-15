@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import { Badge } from '@/components/ui/Badge';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
@@ -34,23 +34,14 @@ export function EpisodeList({ animeId, episodes, currentEpisode }: EpisodeListPr
                   : 'hover:bg-elevated border border-transparent',
               )}
             >
-              <div className={cn(
-                'w-8 h-8 rounded-card flex items-center justify-center flex-shrink-0',
-                isCurrent ? 'bg-accent-primary text-white' : 'bg-elevated',
-              )}>
-                {watched && !isCurrent ? (
-                  <Check className="w-4 h-4 text-green-400 stroke-[1.5]" />
-                ) : (
-                  <span className={cn('font-mono text-xs font-medium', isCurrent ? 'text-white' : 'text-text-muted')}>
-                    {ep.episode}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={cn('text-sm line-clamp-1', isCurrent ? 'text-text-primary' : 'text-text-secondary')}>
+              <span className={cn('font-mono text-xs w-6 text-right flex-shrink-0 tabular-nums', isCurrent ? 'text-accent-glow font-semibold' : watched ? 'text-green-400' : 'text-text-muted')}>
+                {watched && !isCurrent ? '✓' : `${ep.episode}.`}
+              </span>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className={cn('text-sm line-clamp-1', isCurrent ? 'text-text-primary font-medium' : 'text-text-secondary')}>
                   {ep.title || `Episode ${ep.episode}`}
-                </p>
-                {ep.filler && <Badge variant="amber" className="ml-1">Filler</Badge>}
+                </span>
+                {ep.filler && <Badge variant="amber">Filler</Badge>}
               </div>
               <Play className={cn('w-3.5 h-3.5 flex-shrink-0 stroke-[1.5]', isCurrent ? 'text-accent-glow' : 'text-text-muted')} />
             </Link>
