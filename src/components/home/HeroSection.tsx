@@ -15,22 +15,25 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ anime, isLoading }: HeroSectionProps) {
-  const [current, setCurrent] = useState(0);
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
+  
+  // Filter to ensure all featured anime have trailers
+  const animeWithTrailers = anime.filter((item) => item.trailer?.youtube_id);
+  const [current, setCurrent] = useState(0);
 
   const nextSlide = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % Math.max(anime.length, 1));
-  }, [anime.length]);
+    setCurrent((prev) => (prev + 1) % Math.max(animeWithTrailers.length, 1));
+  }, [animeWithTrailers.length]);
 
   useEffect(() => {
-    if (anime.length <= 1) return;
+    if (animeWithTrailers.length <= 1) return;
     const timer = setInterval(nextSlide, 8000);
     return () => clearInterval(timer);
-  }, [anime.length, nextSlide]);
+  }, [animeWithTrailers.length, nextSlide]);
 
   if (isLoading) return <HeroSkeleton />;
 
-  const featured = anime[current];
+  const featured = animeWithTrailers[current];
   if (!featured) return null;
 
   const imageUrl = featured.banner_image || featured.images.webp?.large_image_url || featured.images.jpg?.large_image_url || featured.images.jpg?.image_url;
@@ -134,7 +137,7 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
       </div>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-        {anime.slice(0, 5).map((_, i) => (
+        {animeWithTrailers.slice(0, 5).map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}

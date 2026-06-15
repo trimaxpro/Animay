@@ -13,7 +13,7 @@ export function InfoPanel({ anime }: InfoPanelProps) {
     { label: 'Status', value: anime.status },
     { label: 'Aired', value: anime.aired?.string },
     { label: 'Premiered', value: anime.season && anime.year ? `${anime.season} ${anime.year}` : null },
-    { label: 'Studio', value: anime.studios?.[0]?.name },
+    { label: 'Summary', value: anime.synopsis },
     { label: 'Source', value: anime.source },
     { label: 'Rating', value: anime.rating },
   ].filter((item) => item.value);

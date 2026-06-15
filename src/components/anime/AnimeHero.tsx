@@ -56,7 +56,7 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
               {anime.episodes && <Badge>{anime.episodes} Episodes</Badge>}
               {anime.status && <Badge variant={['Currently Airing', 'Airing'].includes(anime.status) ? 'rose' : 'default'}>{anime.status}</Badge>}
               {anime.season && anime.year && <Badge>{anime.season} {anime.year}</Badge>}
-              {anime.studios?.[0] && <Badge>{anime.studios[0].name}</Badge>}
+              {anime.synopsis && <Badge>Summary</Badge>}
             </div>
 
             <div className="flex flex-wrap gap-2 mb-4">
