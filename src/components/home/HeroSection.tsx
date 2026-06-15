@@ -16,16 +16,11 @@ interface HeroSectionProps {
 
 export function HeroSection({ anime, isLoading }: HeroSectionProps) {
   const [current, setCurrent] = useState(0);
-  const [videoLoaded, setVideoLoaded] = useState(false);
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
 
   const nextSlide = useCallback(() => {
     setCurrent((prev) => (prev + 1) % Math.max(anime.length, 1));
   }, [anime.length]);
-
-  useEffect(() => {
-    setVideoLoaded(false);
-  }, [current]);
 
   useEffect(() => {
     if (anime.length <= 1) return;
@@ -54,19 +49,10 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
           {featured.trailer?.youtube_id ? (
             <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
               <iframe
-                className={`absolute inset-0 w-full h-full scale-[1.35] transition-opacity duration-1000 ${
-                  videoLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
-                src={`https://www.youtube.com/embed/${featured.trailer.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer.youtube_id}&playsinline=1&enablejsapi=1`}
+                className="absolute inset-0 w-full h-full scale-[1.35]"
+                src={`https://www.youtube.com/embed/${featured.trailer.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer.youtube_id}&playsinline=1&enablejsapi=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0`}
                 allow="autoplay; encrypted-media"
                 title="Trailer"
-                onLoad={() => setVideoLoaded(true)}
-              />
-              <div
-                className={`absolute inset-0 bg-cover bg-center scale-105 blur-[2px] transition-opacity duration-1000 ${
-                  videoLoaded ? 'opacity-0' : 'opacity-100'
-                }`}
-                style={{ backgroundImage: `url(${imageUrl})` }}
               />
             </div>
           ) : (
