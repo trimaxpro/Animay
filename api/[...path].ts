@@ -44,7 +44,7 @@ async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; b
       },
       body: JSON.stringify({
         query,
-        variables: { idMal },
+        variables: { idMal: malId },
       }),
     });
 
