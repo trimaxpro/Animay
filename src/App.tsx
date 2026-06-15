@@ -1,0 +1,73 @@
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/Tooltip';
+import { ToastProvider } from '@/components/ui/Toast';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
+
+const HomePage = lazy(() => import('@/pages/HomePage'));
+const BrowsePage = lazy(() => import('@/pages/BrowsePage'));
+const AnimePage = lazy(() => import('@/pages/AnimePage'));
+const WatchPage = lazy(() => import('@/pages/WatchPage'));
+const SearchPage = lazy(() => import('@/pages/SearchPage'));
+const SchedulePage = lazy(() => import('@/pages/SchedulePage'));
+const GenrePage = lazy(() => import('@/pages/GenrePage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 3,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+function PageSkeleton() {
+  return <div className="min-h-screen pt-20" />;
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-void text-text-primary">
+              <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-accent-primary focus:text-white focus:rounded-card">
+                Skip to main content
+              </a>
+              <Navbar />
+              <div id="main-content">
+                <ErrorBoundary>
+                  <Suspense fallback={<PageSkeleton />}>
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/browse" element={<BrowsePage />} />
+                      <Route path="/anime/:id" element={<AnimePage />} />
+                      <Route path="/watch/:id/:episode" element={<WatchPage />} />
+                      <Route path="/search" element={<SearchPage />} />
+                      <Route path="/schedule" element={<SchedulePage />} />
+                      <Route path="/genre/:slug" element={<GenrePage />} />
+                      <Route path="/profile" element={<ProfilePage />} />
+                      <Route path="*" element={<NotFoundPage />} />
+                    </Routes>
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
+              <Footer />
+            </div>
+          </BrowserRouter>
+        </ToastProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;
