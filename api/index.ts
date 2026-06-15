@@ -326,7 +326,12 @@ export default async function handler(req: any, res: any) {
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const apiPath = url.pathname.replace(/^\/api/, "") || "/";
+  let apiPath = url.pathname.replace(/^\/api/, "") || "/";
+  const rawPath = url.searchParams.get("path");
+  if (rawPath) {
+    apiPath = rawPath.startsWith("/") ? rawPath : "/" + rawPath;
+  }
+  apiPath = apiPath.replace(/\/index\.ts$/, "") || "/";
   const malClientId = process.env.MAL_CLIENT_ID || "";
 
   try {
