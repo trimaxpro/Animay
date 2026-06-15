@@ -36,10 +36,8 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
   const featured = animeWithTrailers[current];
   if (!featured) return null;
 
-  const imageUrl = featured.banner_image || featured.images.webp?.large_image_url || featured.images.jpg?.large_image_url || featured.images.jpg?.image_url;
-
   return (
-    <div className="relative h-[65vh] min-h-[500px] overflow-hidden grain-overlay">
+    <div className="relative h-[65vh] min-h-[500px] overflow-hidden grain-overlay bg-void">
       <AnimatePresence mode="wait">
         <motion.div
           key={featured.mal_id}
@@ -49,21 +47,14 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
           transition={{ duration: 0.6 }}
           className="absolute inset-0"
         >
-          {featured.trailer?.youtube_id ? (
-            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-              <iframe
-                className="absolute inset-0 w-full h-full scale-[1.35]"
-                src={`https://www.youtube.com/embed/${featured.trailer.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer.youtube_id}&playsinline=1&enablejsapi=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0`}
-                allow="autoplay; encrypted-media"
-                title="Trailer"
-              />
-            </div>
-          ) : (
-            <div
-              className="absolute inset-0 bg-cover bg-center scale-105 blur-[2px]"
-              style={{ backgroundImage: `url(${imageUrl})` }}
+          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+            <iframe
+              className="absolute inset-0 w-full h-full scale-[1.35]"
+              src={`https://www.youtube.com/embed/${featured.trailer.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer.youtube_id}&playsinline=1&enablejsapi=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0&start=30`}
+              allow="autoplay; encrypted-media"
+              title="Trailer"
             />
-          )}
+          </div>
           <div className="absolute inset-0 bg-gradient-to-r from-void via-void/80 to-void/40" />
           <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/30" />
         </motion.div>
