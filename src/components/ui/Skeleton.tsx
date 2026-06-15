@@ -19,7 +19,7 @@ export function AnimeCardSkeleton() {
 }
 
 export function HeroSkeleton() {
-  return <Skeleton className="h-[80vh] w-full rounded-hero" />;
+  return <Skeleton className="h-[65vh] w-full rounded-hero" />;
 }
 
 export function EpisodeSkeleton() {

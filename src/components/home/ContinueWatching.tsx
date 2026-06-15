@@ -20,11 +20,11 @@ export function ContinueWatching() {
   if (entries.length === 0) return null;
 
   return (
-    <section className="py-6">
-      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 px-4 max-w-7xl mx-auto">
+    <section className="py-6 px-4 max-w-7xl mx-auto">
+      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4">
         Continue Watching
       </h2>
-      <div className="flex gap-4 overflow-x-auto px-4 pb-2" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
         {entries.map((entry) => (
           <Link
             key={`${entry.malId}-${entry.episode}`}

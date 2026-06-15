@@ -16,6 +16,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ anime, isLoading }: HeroSectionProps) {
   const [current, setCurrent] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
 
   const nextSlide = useCallback(() => {
@@ -23,8 +24,12 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
   }, [anime.length]);
 
   useEffect(() => {
+    setVideoLoaded(false);
+  }, [current]);
+
+  useEffect(() => {
     if (anime.length <= 1) return;
-    const timer = setInterval(nextSlide, 6000);
+    const timer = setInterval(nextSlide, 8000);
     return () => clearInterval(timer);
   }, [anime.length, nextSlide]);
 
@@ -33,10 +38,10 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
   const featured = anime[current];
   if (!featured) return null;
 
-  const imageUrl = featured.images.webp?.large_image_url || featured.images.jpg?.large_image_url || featured.images.jpg?.image_url;
+  const imageUrl = featured.banner_image || featured.images.webp?.large_image_url || featured.images.jpg?.large_image_url || featured.images.jpg?.image_url;
 
   return (
-    <div className="relative h-[85vh] min-h-[600px] overflow-hidden grain-overlay">
+    <div className="relative h-[65vh] min-h-[500px] overflow-hidden grain-overlay">
       <AnimatePresence mode="wait">
         <motion.div
           key={featured.mal_id}
@@ -46,10 +51,30 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
           transition={{ duration: 0.6 }}
           className="absolute inset-0"
         >
-          <div
-            className="absolute inset-0 bg-cover bg-center scale-105 blur-[2px]"
-            style={{ backgroundImage: `url(${imageUrl})` }}
-          />
+          {featured.trailer?.youtube_id ? (
+            <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+              <iframe
+                className={`absolute inset-0 w-full h-full scale-[1.35] transition-opacity duration-1000 ${
+                  videoLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                src={`https://www.youtube.com/embed/${featured.trailer.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer.youtube_id}&playsinline=1&enablejsapi=1`}
+                allow="autoplay; encrypted-media"
+                title="Trailer"
+                onLoad={() => setVideoLoaded(true)}
+              />
+              <div
+                className={`absolute inset-0 bg-cover bg-center scale-105 blur-[2px] transition-opacity duration-1000 ${
+                  videoLoaded ? 'opacity-0' : 'opacity-100'
+                }`}
+                style={{ backgroundImage: `url(${imageUrl})` }}
+              />
+            </div>
+          ) : (
+            <div
+              className="absolute inset-0 bg-cover bg-center scale-105 blur-[2px]"
+              style={{ backgroundImage: `url(${imageUrl})` }}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-r from-void via-void/80 to-void/40" />
           <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/30" />
         </motion.div>

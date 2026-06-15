@@ -14,7 +14,7 @@ interface AnimeHeroProps {
 export function AnimeHero({ anime }: AnimeHeroProps) {
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
-  const imageUrl = anime.images.webp?.large_image_url || anime.images.jpg?.large_image_url;
+  const imageUrl = anime.banner_image || anime.images.webp?.large_image_url || anime.images.jpg?.large_image_url;
   const posterUrl = anime.images.webp?.image_url || anime.images.jpg?.image_url;
 
   return (

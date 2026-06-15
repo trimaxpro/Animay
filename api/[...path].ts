@@ -21,6 +21,48 @@ function setCache(key: string, data: unknown, ttlMs: number) {
   }
 }
 
+async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; banner_image?: string; al_trailer?: { youtube_id: string | null } } | null> {
+  const query = `
+    query ($idMal: Int) {
+      Media (idMal: $idMal, type: ANIME) {
+        id
+        bannerImage
+        trailer {
+          id
+          site
+        }
+      }
+    }
+  `;
+
+  try {
+    const res = await fetch("https://graphql.anilist.co", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        variables: { idMal },
+      }),
+    });
+
+    if (!res.ok) return null;
+    const body = await res.json() as any;
+    const media = body?.data?.Media;
+    if (!media) return null;
+
+    return {
+      anilist_id: media.id || undefined,
+      banner_image: media.bannerImage || undefined,
+      al_trailer: media.trailer?.site === "youtube" ? { youtube_id: media.trailer.id } : undefined,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 function setCors(res: any) {
   res.setHeader("Access-Control-Allow-Origin", CORS_ORIGIN);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -76,8 +118,8 @@ async function jikanFetch<T = unknown>(path: string): Promise<T> {
   return data;
 }
 
-const LIST_FIELDS = "id,title,main_picture,alternative_titles,mean,rank,popularity,num_episodes,media_type,status,genres,start_season,average_episode_duration,rating";
-const DETAIL_FIELDS = "id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,num_episodes,status,media_type,genres,studios,start_season,broadcast,source,average_episode_duration,rating,related_anime,recommendations,characters,statistics";
+const LIST_FIELDS = "id,title,main_picture,alternative_titles,mean,rank,popularity,num_episodes,media_type,status,genres,start_season,average_episode_duration,rating,trailer";
+const DETAIL_FIELDS = "id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,num_episodes,status,media_type,genres,studios,start_season,broadcast,source,average_episode_duration,rating,related_anime,recommendations,characters,statistics,trailer";
 
 function malStatus(s: string): string {
   return { currently_airing: "Airing", finished_airing: "Completed", not_yet_aired: "Upcoming" }[s] || s;
@@ -96,6 +138,56 @@ function extractNodes(data: { data?: { node?: Record<string, unknown> }[] }): Re
 }
 
 function normalizeMal(item: Record<string, unknown>): Record<string, unknown> {
+  const isJikan = 'mal_id' in item && !('id' in item);
+
+  if (isJikan) {
+    const images = item.images as any || {};
+    const rawTrailer = item.trailer as Record<string, unknown> | null;
+    const trailerData = rawTrailer ? {
+      youtube_id: (rawTrailer.youtube_id || null) as string | null,
+      url: (rawTrailer.url || null) as string | null,
+    } : null;
+
+    return {
+      mal_id: item.mal_id as number,
+      title: item.title as string || "Unknown",
+      title_english: (item.title_english || null) as string | null,
+      title_japanese: (item.title_japanese || null) as string | null,
+      images: {
+        jpg: { 
+          image_url: images.jpg?.image_url || null, 
+          large_image_url: images.jpg?.large_image_url || images.jpg?.image_url || null 
+        },
+        webp: { 
+          image_url: images.webp?.image_url || null, 
+          large_image_url: images.webp?.large_image_url || images.webp?.image_url || null 
+        },
+      },
+      type: (item.type || null) as string | null,
+      episodes: (item.episodes || null) as number | null,
+      status: (item.status || null) as string | null,
+      score: (item.score || null) as number | null,
+      scored_by: (item.scored_by || null) as number | null,
+      rank: (item.rank || null) as number | null,
+      popularity: (item.popularity || null) as number | null,
+      members: (item.members || null) as number | null,
+      favorites: (item.favorites || null) as number | null,
+      synopsis: (item.synopsis || null) as string | null,
+      season: (item.season || null) as string | null,
+      year: (item.year || null) as number | null,
+      aired: item.aired || { from: null, to: null, string: "?" },
+      broadcast: item.broadcast || null,
+      studios: (item.studios || []) as any[],
+      genres: (item.genres || []) as any[],
+      themes: (item.themes || []) as any[],
+      source: (item.source || null) as string | null,
+      rating: (item.rating || null) as string | null,
+      duration: (item.duration || null) as string | null,
+      trailer: trailerData,
+      relations: (item.relations || []) as any[],
+    };
+  }
+
   const mp = item.main_picture as Record<string, string | null> || {};
   const alt = item.alternative_titles as Record<string, string | null> || {};
   const season = item.start_season as Record<string, unknown> || {};
@@ -103,6 +195,12 @@ function normalizeMal(item: Record<string, unknown>): Record<string, unknown> {
   const airedTo = item.end_date as string | null;
   const bc = item.broadcast as Record<string, string | null> || null;
   const dur = item.average_episode_duration as number | null;
+  
+  const rawTrailer = item.trailer as Record<string, unknown> | null;
+  const trailerData = rawTrailer ? {
+    youtube_id: (rawTrailer.youtube_id || null) as string | null,
+    url: (rawTrailer.url || null) as string | null,
+  } : null;
 
   return {
     mal_id: item.id as number,
@@ -137,7 +235,7 @@ function normalizeMal(item: Record<string, unknown>): Record<string, unknown> {
     source: item.source as string || null,
     rating: item.rating as string || null,
     duration: dur ? `${Math.round(dur / 60)} min per ep` : null,
-    trailer: null,
+    trailer: trailerData,
     relations: (item.related_anime as Array<Record<string, unknown>> || []).map((r: Record<string, unknown>) => {
       const rn = r.node as Record<string, unknown> || {};
       return {
@@ -233,29 +331,63 @@ export default async function handler(req: any, res: any) {
     }
 
     if (apiPath === "/anime/trending") {
-      const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=bypopularity&limit=20&fields=${LIST_FIELDS}`, malClientId);
-      const items = extractNodes(data);
-      return res.status(200).json({ data: items.map(normalizeMal) });
+      let items: any[];
+      try {
+        const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=bypopularity&limit=20&fields=${LIST_FIELDS}`, malClientId);
+        items = extractNodes(data).map(normalizeMal);
+      } catch (err) {
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>("/top/anime?filter=bypopularity&limit=20");
+        items = data.data.map(normalizeMal);
+      }
+
+      const topItems = items.slice(0, 5);
+      await Promise.all(topItems.map(async (item) => {
+        const alInfo = await fetchAniListInfo(item.mal_id);
+        if (alInfo) {
+          item.anilist_id = alInfo.anilist_id;
+          item.banner_image = alInfo.banner_image;
+          if (!item.trailer?.youtube_id && alInfo.al_trailer?.youtube_id) {
+            item.trailer = alInfo.al_trailer;
+          }
+        }
+      }));
+
+      return res.status(200).json({ data: items });
     }
 
     if (apiPath === "/anime/seasonal") {
       const { current, year } = getSeason();
-      const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${year}/${current}?limit=24&fields=${LIST_FIELDS}`, malClientId);
-      const items = extractNodes(data);
-      return res.status(200).json({ data: items.map(normalizeMal) });
+      try {
+        const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${year}/${current}?limit=24&fields=${LIST_FIELDS}`, malClientId);
+        const items = extractNodes(data);
+        return res.status(200).json({ data: items.map(normalizeMal) });
+      } catch (err) {
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${year}/${current}?limit=24`);
+        return res.status(200).json({ data: data.data.map(normalizeMal) });
+      }
     }
 
     if (apiPath === "/anime/upcoming") {
       const { next, nextYear } = getSeason();
-      const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${nextYear}/${next}?limit=12&fields=${LIST_FIELDS}`, malClientId);
-      const items = extractNodes(data);
-      return res.status(200).json({ data: items.map(normalizeMal) });
+      try {
+        const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${nextYear}/${next}?limit=12&fields=${LIST_FIELDS}`, malClientId);
+        const items = extractNodes(data);
+        return res.status(200).json({ data: items.map(normalizeMal) });
+      } catch (err) {
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${nextYear}/${next}?limit=12`);
+        return res.status(200).json({ data: data.data.map(normalizeMal) });
+      }
     }
 
     if (apiPath === "/anime/top") {
-      const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=all&limit=10&fields=${LIST_FIELDS}`, malClientId);
-      const items = extractNodes(data);
-      return res.status(200).json({ data: items.map(normalizeMal) });
+      try {
+        const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=all&limit=10&fields=${LIST_FIELDS}`, malClientId);
+        const items = extractNodes(data);
+        return res.status(200).json({ data: items.map(normalizeMal) });
+      } catch (err) {
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>("/top/anime?limit=10");
+        return res.status(200).json({ data: data.data.map(normalizeMal) });
+      }
     }
 
     const animeDetailMatch = apiPath.match(/^\/anime\/(\d+)$/);
@@ -265,10 +397,50 @@ export default async function handler(req: any, res: any) {
       const cached = getCached(cacheKey);
       if (cached) return res.status(200).json(cached);
 
-      const data = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=${DETAIL_FIELDS}`, malClientId);
-      const normalized = normalizeMal(data);
-      const chars = parseChars(data);
+      let normalized: Record<string, any>;
+      let chars: any[] = [];
+      try {
+        const data = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=${DETAIL_FIELDS}`, malClientId);
+        normalized = normalizeMal(data);
+        chars = parseChars(data);
+      } catch (err) {
+        const jikanData = await jikanFetch<{ data: Record<string, unknown> }>(`/anime/${id}`);
+        normalized = normalizeMal(jikanData.data);
+        try {
+          const charData = await jikanFetch<{ data: any[] }>(`/anime/${id}/characters`);
+          chars = (charData.data || []).slice(0, 15).map((c: any) => {
+            const va = c.voice_actors?.find((v: any) => v.language === 'Japanese');
+            return {
+              mal_id: c.character.mal_id,
+              name: c.character.name,
+              images: { jpg: { image_url: c.character.images?.jpg?.image_url || null } },
+              role: c.role,
+              voice_actors: va ? [{
+                person: {
+                  mal_id: va.person.mal_id,
+                  name: va.person.name,
+                  images: { jpg: { image_url: va.person.images?.jpg?.image_url || null } }
+                },
+                language: 'Japanese'
+              }] : []
+            };
+          });
+        } catch {
+          chars = [];
+        }
+      }
+
       normalized.characters = chars;
+
+      const alInfo = await fetchAniListInfo(normalized.mal_id);
+      if (alInfo) {
+        normalized.anilist_id = alInfo.anilist_id;
+        normalized.banner_image = alInfo.banner_image;
+        if (!normalized.trailer?.youtube_id && alInfo.al_trailer?.youtube_id) {
+          normalized.trailer = alInfo.al_trailer;
+        }
+      }
+
       setCache(cacheKey, normalized, 600000);
       return res.status(200).json(normalized);
     }
@@ -342,11 +514,36 @@ export default async function handler(req: any, res: any) {
       const cached = getCached(cacheKey);
       if (cached) return res.status(200).json(cached);
 
-      const data = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=recommendations`, malClientId);
-      const recs = parseRecs(data);
-      const result = { data: recs };
-      setCache(cacheKey, result, 600000);
-      return res.status(200).json(result);
+      try {
+        const data = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=recommendations`, malClientId);
+        const recs = parseRecs(data);
+        const result = { data: recs };
+        setCache(cacheKey, result, 600000);
+        return res.status(200).json(result);
+      } catch (err) {
+        const data = await jikanFetch<{ data: any[] }>(`/anime/${id}/recommendations`);
+        const recs = (data.data || []).slice(0, 10).map((r: any) => {
+          const entry = r.entry || {};
+          return {
+            entry: {
+              mal_id: entry.mal_id,
+              title: entry.title || "Unknown",
+              title_english: null, title_japanese: null,
+              images: {
+                jpg: { image_url: entry.images?.jpg?.image_url || null, large_image_url: entry.images?.jpg?.large_image_url || null },
+                webp: { image_url: entry.images?.webp?.image_url || null, large_image_url: entry.images?.webp?.large_image_url || null }
+              },
+              type: null, episodes: null, status: null, score: null,
+              scored_by: null, rank: null, popularity: null, members: null, favorites: null, synopsis: null,
+              season: null, year: null, aired: { from: null, to: null, string: "?" }, broadcast: null,
+              studios: [], genres: [], themes: [], source: null, rating: null, duration: null, trailer: null, relations: []
+            }
+          };
+        });
+        const result = { data: recs };
+        setCache(cacheKey, result, 600000);
+        return res.status(200).json(result);
+      }
     }
 
     if (apiPath === "/search") {
@@ -354,14 +551,29 @@ export default async function handler(req: any, res: any) {
       const page = parseInt(url.searchParams.get("page") || "1");
       const limit = parseInt(url.searchParams.get("limit") || "25");
       const offset = (page - 1) * limit;
-      const data = await malFetch<{ data: { node?: Record<string, unknown> }[]; paging?: { next?: string } }>(
-        `/anime?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&fields=${LIST_FIELDS}`, malClientId
-      );
-      const items = extractNodes(data);
-      return res.status(200).json({
-        data: items.map(normalizeMal),
-        pagination: malPagination(data, limit, offset),
-      });
+      try {
+        const data = await malFetch<{ data: { node?: Record<string, unknown> }[]; paging?: { next?: string } }>(
+          `/anime?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&fields=${LIST_FIELDS}`, malClientId
+        );
+        const items = extractNodes(data);
+        return res.status(200).json({
+          data: items.map(normalizeMal),
+          pagination: malPagination(data, limit, offset),
+        });
+      } catch (err) {
+        const data = await jikanFetch<{ data: Record<string, unknown>[]; pagination: Record<string, unknown> }>(
+          `/anime?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`
+        );
+        return res.status(200).json({
+          data: data.data.map(normalizeMal),
+          pagination: {
+            last_visible_page: (data.pagination?.last_visible_page as number) || 1,
+            has_next_page: (data.pagination?.has_next_page as boolean) || false,
+            current_page: page,
+            items: { count: data.data.length, total: 0, per_page: limit },
+          },
+        });
+      }
     }
 
     if (apiPath === "/browse") {
