@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { useWatchlist } from '@/hooks/useWatchlist';
+import { useWatchHistory } from '@/hooks/useWatchHistory';
 import type { Anime } from '@/types/anime';
 import { useState } from 'react';
 
@@ -13,6 +14,7 @@ interface AnimeHeroProps {
 
 export function AnimeHero({ anime }: AnimeHeroProps) {
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
+  const { watchHistory } = useWatchHistory();
   const [synopsisExpanded, setSynopsisExpanded] = useState(false);
   const imageUrl = anime.banner_image || anime.images.webp?.large_image_url || anime.images.jpg?.large_image_url;
   const posterUrl = anime.images.webp?.image_url || anime.images.jpg?.image_url;
@@ -78,12 +80,18 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
             )}
 
             <div className="flex flex-wrap items-center gap-3">
-              <Link to={`/watch/${anime.mal_id}/1`}>
-                <Button variant="primary" size="md">
-                  <Play className="w-4 h-4 fill-white" />
-                  Watch Now
-                </Button>
-              </Link>
+              {(() => {
+                const lastWatched = watchHistory.find((h) => h.malId === anime.mal_id);
+                const nextEpisode = lastWatched ? lastWatched.episode : 1;
+                return (
+                  <Link to={`/watch/${anime.mal_id}/${nextEpisode}`}>
+                    <Button variant="primary" size="md">
+                      <Play className="w-4 h-4 fill-white" />
+                      {lastWatched ? `Resume Ep. ${nextEpisode}` : 'Watch Now'}
+                    </Button>
+                  </Link>
+                );
+              })()}
               <Button
                 variant="secondary"
                 size="md"

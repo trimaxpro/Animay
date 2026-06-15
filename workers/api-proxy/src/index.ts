@@ -25,12 +25,13 @@ function setCache(key: string, data: unknown, ttlMs: number) {
   }
 }
 
-async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; banner_image?: string; al_trailer?: { youtube_id: string | null } } | null> {
+async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; banner_image?: string; description?: string; al_trailer?: { youtube_id: string | null } } | null> {
   const query = `
     query ($idMal: Int) {
       Media (idMal: $idMal, type: ANIME) {
         id
         bannerImage
+        description
         trailer {
           id
           site
@@ -57,9 +58,12 @@ async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; b
     const media = body?.data?.Media;
     if (!media) return null;
 
+    const cleanDescription = media.description ? media.description.replace(/<[^>]*>/g, "") : undefined;
+
     return {
       anilist_id: media.id || undefined,
       banner_image: media.bannerImage || undefined,
+      description: cleanDescription,
       al_trailer: media.trailer?.site === "youtube" ? { youtube_id: media.trailer.id } : undefined,
     };
   } catch (e) {
@@ -289,6 +293,9 @@ export default {
           if (alInfo) {
             item.anilist_id = alInfo.anilist_id;
             item.banner_image = alInfo.banner_image;
+            if (alInfo.description) {
+              item.synopsis = alInfo.description;
+            }
             if (alInfo.al_trailer?.youtube_id) {
               item.trailer = alInfo.al_trailer;
             }
@@ -379,6 +386,9 @@ export default {
         if (alInfo) {
           normalized.anilist_id = alInfo.anilist_id;
           normalized.banner_image = alInfo.banner_image;
+          if (alInfo.description) {
+            normalized.synopsis = alInfo.description;
+          }
           if (alInfo.al_trailer?.youtube_id) {
             normalized.trailer = alInfo.al_trailer;
           }
