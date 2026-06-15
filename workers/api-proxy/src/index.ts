@@ -289,7 +289,7 @@ export default {
           if (alInfo) {
             item.anilist_id = alInfo.anilist_id;
             item.banner_image = alInfo.banner_image;
-            if (!item.trailer?.youtube_id && alInfo.al_trailer?.youtube_id) {
+            if (alInfo.al_trailer?.youtube_id) {
               item.trailer = alInfo.al_trailer;
             }
           }
@@ -379,7 +379,7 @@ export default {
         if (alInfo) {
           normalized.anilist_id = alInfo.anilist_id;
           normalized.banner_image = alInfo.banner_image;
-          if (!normalized.trailer?.youtube_id && alInfo.al_trailer?.youtube_id) {
+          if (alInfo.al_trailer?.youtube_id) {
             normalized.trailer = alInfo.al_trailer;
           }
         }
