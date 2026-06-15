@@ -78,14 +78,12 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
             )}
 
             <div className="flex flex-wrap items-center gap-3">
-              {anime.episodes && (
-                <Link to={`/watch/${anime.mal_id}/1`}>
-                  <Button variant="primary" size="md">
-                    <Play className="w-4 h-4 fill-white" />
-                    Watch Episode 1
-                  </Button>
-                </Link>
-              )}
+              <Link to={`/watch/${anime.mal_id}/1`}>
+                <Button variant="primary" size="md">
+                  <Play className="w-4 h-4 fill-white" />
+                  Watch Now
+                </Button>
+              </Link>
               <Button
                 variant="secondary"
                 size="md"
