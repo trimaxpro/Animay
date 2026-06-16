@@ -4,23 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        void: '#0A0A0F',
-        surface: '#111118',
-        elevated: '#1A1A26',
-        'accent-primary': '#7C3AED',
-        'accent-glow': '#A78BFA',
+        void: '#191919',
+        surface: '#1F1F1F',
+        elevated: '#2A2A2A',
+        'accent-primary': '#6B7280',
+        'accent-glow': '#9CA3AF',
         'accent-rose': '#F43F5E',
         'accent-amber': '#F59E0B',
-        'text-primary': '#F8F8FF',
-        'text-secondary': '#A8A8C0',
-        'text-muted': '#52526E',
-        'border-subtle': '#1E1E2E',
-        'border-glow': 'rgba(124,58,237,0.4)',
+        'text-primary': '#EBEBEB',
+        'text-secondary': '#9B9B9B',
+        'text-muted': '#5E5E5E',
+        'border-subtle': '#333333',
+        'border-glow': 'rgba(255,255,255,0.08)',
       },
       fontFamily: {
-        display: ['Oswald', 'Inter', 'sans-serif'],
-        body: ['Inter', 'Nunito Sans', 'Lato', 'Roboto', 'sans-serif'],
-        mono: ['Ubuntu Mono', 'JetBrains Mono', 'monospace'],
+        display: ['Inter', 'sans-serif'],
+        body: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
         input: '4px',
@@ -29,8 +29,8 @@ export default {
         hero: '16px',
       },
       boxShadow: {
-        glow: '0 0 24px rgba(124,58,237,0.3)',
-        'glow-sm': '0 0 12px rgba(124,58,237,0.2)',
+        glow: '0 0 24px rgba(0,0,0,0.3)',
+        'glow-sm': '0 0 12px rgba(0,0,0,0.2)',
       },
       animation: {
         shimmer: 'shimmer 2s infinite linear',

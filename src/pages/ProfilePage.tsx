@@ -11,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import type { WatchlistStatus } from '@/types/user';
 
-const AVATAR_COLORS = ['#7C3AED', '#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#EC4899'];
+const AVATAR_COLORS = ['#6B7280', '#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#EC4899'];
 const STATUS_TABS: { value: WatchlistStatus; label: string; icon: typeof Play }[] = [
   { value: 'watching', label: 'Watching', icon: Eye },
   { value: 'plan_to_watch', label: 'Plan to Watch', icon: Star },

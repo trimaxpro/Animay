@@ -4,18 +4,18 @@
 
 @layer base {
   :root {
-    --bg-void: #0A0A0F;
-    --bg-surface: #111118;
-    --bg-elevated: #1A1A26;
-    --accent-primary: #7C3AED;
-    --accent-glow: #A78BFA;
+    --bg-void: #191919;
+    --bg-surface: #1F1F1F;
+    --bg-elevated: #2A2A2A;
+    --accent-primary: #6B7280;
+    --accent-glow: #9CA3AF;
     --accent-rose: #F43F5E;
     --accent-amber: #F59E0B;
-    --text-primary: #F8F8FF;
-    --text-secondary: #A8A8C0;
-    --text-muted: #52526E;
-    --border-subtle: #1E1E2E;
-    --border-glow: rgba(124,58,237,0.4);
+    --text-primary: #EBEBEB;
+    --text-secondary: #9B9B9B;
+    --text-muted: #5E5E5E;
+    --border-subtle: #333333;
+    --border-glow: rgba(255,255,255,0.08);
   }
 
   * {
@@ -60,19 +60,19 @@
 
 @layer components {
   .dot-pattern {
-    background-image: radial-gradient(circle, #1E1E35 1px, transparent 1px);
+    background-image: radial-gradient(circle, #333333 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
   .glass-card {
-    background: rgba(26, 26, 38, 0.8);
+    background: rgba(42, 42, 42, 0.8);
     backdrop-filter: blur(12px);
     border: 1px solid var(--border-subtle);
   }
 
   .glow-border {
     border: 1px solid var(--border-glow);
-    box-shadow: 0 0 24px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.3);
   }
 
   .shimmer {

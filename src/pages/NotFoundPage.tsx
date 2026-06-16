@@ -44,13 +44,13 @@ export default function NotFoundPage() {
 
           <div className="mt-12 flex justify-center">
             <svg width="120" height="80" viewBox="0 0 120 80" fill="none" className="opacity-20">
-              <rect x="30" y="50" width="60" height="30" rx="8" fill="#7C3AED" />
-              <circle cx="60" cy="35" r="20" fill="#7C3AED" />
-              <rect x="55" y="25" width="4" height="8" rx="2" fill="#0A0A0F" />
-              <rect x="62" y="25" width="4" height="8" rx="2" fill="#0A0A0F" />
-              <ellipse cx="60" cy="42" rx="6" ry="3" fill="#0A0A0F" />
-              <line x1="40" y1="55" x2="40" y2="75" stroke="#7C3AED" strokeWidth="3" />
-              <line x1="80" y1="55" x2="80" y2="75" stroke="#7C3AED" strokeWidth="3" />
+              <rect x="30" y="50" width="60" height="30" rx="8" fill="#6B7280" />
+              <circle cx="60" cy="35" r="20" fill="#6B7280" />
+              <rect x="55" y="25" width="4" height="8" rx="2" fill="#191919" />
+              <rect x="62" y="25" width="4" height="8" rx="2" fill="#191919" />
+              <ellipse cx="60" cy="42" rx="6" ry="3" fill="#191919" />
+              <line x1="40" y1="55" x2="40" y2="75" stroke="#6B7280" strokeWidth="3" />
+              <line x1="80" y1="55" x2="80" y2="75" stroke="#6B7280" strokeWidth="3" />
             </svg>
           </div>
         </div>
