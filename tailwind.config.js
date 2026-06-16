@@ -21,6 +21,7 @@ export default {
         display: ['Oswald', 'Inter', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        label: ['Lato', 'sans-serif'],
       },
       borderRadius: {
         input: '4px',
