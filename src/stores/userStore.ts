@@ -20,7 +20,7 @@ interface UserState {
 export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
-      preferences: { displayName: 'Anime Fan', avatarColor: '#7C3AED' },
+      preferences: { displayName: 'Anime Fan', avatarColor: '#3B82F6' },
       watchlist: [],
       watchHistory: [],
 

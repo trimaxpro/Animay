@@ -7,15 +7,15 @@
     --bg-void: #191919;
     --bg-surface: #1F1F1F;
     --bg-elevated: #2A2A2A;
-    --accent-primary: #6B7280;
-    --accent-glow: #9CA3AF;
+    --accent-primary: #3B82F6;
+    --accent-glow: #60A5FA;
     --accent-rose: #F43F5E;
     --accent-amber: #F59E0B;
     --text-primary: #EBEBEB;
     --text-secondary: #9B9B9B;
     --text-muted: #5E5E5E;
     --border-subtle: #333333;
-    --border-glow: rgba(255,255,255,0.08);
+    --border-glow: rgba(59,130,246,0.3);
   }
 
   * {
@@ -72,7 +72,7 @@
 
   .glow-border {
     border: 1px solid var(--border-glow);
-    box-shadow: 0 0 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 24px rgba(59, 130, 246, 0.25);
   }
 
   .shimmer {
