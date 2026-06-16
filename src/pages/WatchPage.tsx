@@ -16,6 +16,7 @@ import { cn } from '@/utils/cn';
 const SERVERS = [
   { id: 'mal', label: 'MegaPlay', icon: Monitor },
   { id: 'animeplay', label: 'AnimePlay', icon: Globe },
+  { id: 'wfs', label: 'WatchFree', icon: Server },
   { id: 'filmu', label: 'FilmU', icon: Server },
   { id: 'embed', label: 'TryEmbed', icon: Globe },
   { id: 'anikoto', label: 'Anikoto', icon: Server },
@@ -34,7 +35,7 @@ export default function WatchPage() {
   const { addToHistory } = useWatchHistory();
   const navigate = useNavigate();
 
-  const anime = detail.data;
+  const anime = detail.data as any;
   const currentEpisode = episodes.data?.find((ep) => ep.episode === episodeNum);
 
   const anilistId = anime?.anilist_id || animeId;
@@ -42,6 +43,10 @@ export default function WatchPage() {
     ? `https://megaplay.buzz/stream/mal/${animeId}/${episodeNum}/sub`
     : server === 'animeplay'
     ? `https://animeplay.cfd/stream/mal/${animeId}/${episodeNum}/sub`
+    : server === 'wfs'
+    ? (anime?.tmdb_type === 'movie'
+      ? `https://embed.wfs.lol/embed/movie/${anime.tmdb_id}`
+      : `https://embed.wfs.lol/embed/tv/${anime.tmdb_id}/${anime.tmdb_season || 1}/${episodeNum}`)
     : server === 'filmu'
     ? `https://embed.filmu.in/embed/anime/${anilistId}/${episodeNum}/sub`
     : server === 'anikoto'
@@ -100,7 +105,7 @@ export default function WatchPage() {
             {/* Server selector */}
             <div className="flex items-center gap-1.5 mt-3 mb-4">
               <span className="text-xs text-text-muted mr-1">Server:</span>
-              {SERVERS.map((s) => (
+              {SERVERS.filter((s) => s.id !== 'wfs' || (anime && anime.tmdb_id)).map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setServer(s.id)}

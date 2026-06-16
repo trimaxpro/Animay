@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 const MAL_BASE = "https://api.myanimelist.net/v2";
 const JIKAN_BASE = "https://api.jikan.moe/v4";
 const ANISKIP_BASE = "https://api.aniskip.com/v2";
@@ -5,6 +8,48 @@ const ANISKIP_BASE = "https://api.aniskip.com/v2";
 const CORS_ORIGIN = "*";
 
 const cache = new Map<string, { data: unknown; expires: number }>();
+
+let mappingCache: Map<number, { tmdbId: number; type: 'tv' | 'movie'; season: number }> | null = null;
+
+function loadMappingCache() {
+  if (mappingCache) return mappingCache;
+  mappingCache = new Map();
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'anime-list-mini.json');
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const list = JSON.parse(raw) as any[];
+      for (const item of list) {
+        const malId = item.mal_id;
+        const alId = item.anilist_id;
+        const tmdb = item.themoviedb_id;
+        
+        let tmdbId = 0;
+        let type: 'tv' | 'movie' = 'tv';
+        if (tmdb) {
+          if (typeof tmdb.tv === 'number') {
+            tmdbId = tmdb.tv;
+            type = 'tv';
+          } else if (typeof tmdb.movie === 'number') {
+            tmdbId = tmdb.movie;
+            type = 'movie';
+          }
+        }
+        
+        const season = item.season?.tmdb || 1;
+        
+        if (tmdbId > 0) {
+          const val = { tmdbId, type, season };
+          if (typeof malId === 'number') mappingCache.set(malId, val);
+          if (typeof alId === 'number') mappingCache.set(alId, val);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load mapping cache:", e);
+  }
+  return mappingCache;
+}
 
 function getCached(key: string): unknown | null {
   const entry = cache.get(key);
@@ -484,6 +529,13 @@ export default async function handler(req: any, res: any) {
         if (alInfo.al_trailer?.youtube_id) {
           normalized.trailer = alInfo.al_trailer;
         }
+      }
+      const mappings = loadMappingCache();
+      const mapVal = mappings.get(normalized.mal_id) || (normalized.anilist_id ? mappings.get(normalized.anilist_id) : null);
+      if (mapVal) {
+        normalized.tmdb_id = mapVal.tmdbId;
+        normalized.tmdb_type = mapVal.type;
+        normalized.tmdb_season = mapVal.season;
       }
 
       setCache(cacheKey, normalized, 600000);
