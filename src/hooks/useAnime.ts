@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import * as animeApi from '@/api/anime';
 
 export function useTrending() {
@@ -80,6 +80,7 @@ export function useBrowse(params: Omit<animeApi.BrowseParams, 'page' | 'perPage'
     queryFn: ({ pageParam = 1 }) => animeApi.getBrowse({ ...params, page: pageParam as number, perPage: 30 }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => lastPage.pagination.has_next_page ? lastPage.pagination.current_page + 1 : undefined,
+    placeholderData: keepPreviousData,
     staleTime: 0,
     refetchOnMount: true,
     gcTime: 10 * 60 * 1000,

@@ -19,15 +19,14 @@ export default function BrowsePage() {
     type: 'TV', status: null, season: null, year: null, genres: [], sort: 'score',
   });
 
-  const browseParams = {
-    type: filters.type || undefined,
-    status: filters.status || undefined,
-    season: filters.season || undefined,
-    year: filters.year || undefined,
-    genres: filters.genres.length > 0 ? filters.genres : undefined,
-    sort: filters.sort || undefined,
-  };
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useBrowse(browseParams);
+  const browseParams: Record<string, unknown> = {};
+  if (filters.type) browseParams.type = filters.type;
+  if (filters.status) browseParams.status = filters.status;
+  if (filters.season) browseParams.season = filters.season;
+  if (filters.year) browseParams.year = filters.year;
+  if (filters.genres.length > 0) browseParams.genres = filters.genres;
+  browseParams.sort = filters.sort;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, error } = useBrowse(browseParams as Parameters<typeof useBrowse>[0]);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const allAnime = data?.pages.flatMap((p) => p.data) || [];

@@ -644,7 +644,7 @@ export default async function handler(req: any, res: any) {
               trailer { id site }
               rankings { rank type }
               nextAiringEpisode { airingAt episode }
-              relations { relationType node { id idMal title { romaji english } format } }
+              relations { edges { relationType node { id idMal title { romaji english } format } } }
             }
           }
         }`;
@@ -714,7 +714,7 @@ export default async function handler(req: any, res: any) {
               rating: null,
               duration: m.duration ? `${m.duration} min per ep` : null,
               trailer: m.trailer?.site === "youtube" ? { youtube_id: m.trailer.id, url: `https://www.youtube.com/watch?v=${m.trailer.id}` } : null,
-              relations: (m.relations || []).map((r: any) => ({
+              relations: (m.relations?.edges || []).map((r: any) => ({
                 relation: r.relationType || "",
                 entry: [{ mal_id: r.node?.idMal || r.node?.id, name: r.node?.title?.english || r.node?.title?.romaji || "Unknown", type: r.node?.format ? mapFormat(r.node.format) : null }],
               })),

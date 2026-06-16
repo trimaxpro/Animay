@@ -10,7 +10,7 @@ export function GenreQuickNav() {
       <div className="flex flex-wrap gap-2">
         {GENRES.map((genre) => (
           <Link
-            key={genre.id}
+            key={genre.slug}
             to={`/genre/${genre.slug}`}
             className="group relative overflow-hidden px-4 py-2 rounded-card bg-elevated border border-border-subtle text-sm text-text-secondary font-body font-medium transition-all duration-300 hover:border-accent-primary/30 hover:text-accent-glow"
           >

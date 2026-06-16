@@ -15,7 +15,7 @@ export default function GenrePage() {
   const { data, isLoading } = useQuery({
     queryKey: ['genre', slug],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ data: Anime[] }>(`/browse?genres=${genre?.id || ''}&limit=25`);
+      const { data } = await apiClient.get<{ data: Anime[] }>('/browse', { params: { genres: genre?.name, perPage: 25 } });
       return data;
     },
     staleTime: 5 * 60 * 1000,
