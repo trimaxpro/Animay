@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Play, Hash, CheckCircle } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import { Badge } from '@/components/ui/Badge';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
@@ -28,14 +28,17 @@ export function EpisodeList({ animeId, episodes, currentEpisode }: EpisodeListPr
               key={ep.mal_id}
               to={`/watch/${animeId}/${ep.episode}`}
               className={cn(
-                'flex items-center gap-3 p-2.5 rounded-card transition-all duration-200',
+                'group flex items-center gap-3 p-2.5 rounded-card transition-all duration-200',
                 isCurrent
                   ? 'bg-accent-primary/15 border border-accent-primary/30'
                   : 'hover:bg-elevated border border-transparent',
               )}
             >
-              <span className={cn('w-6 flex items-center justify-center flex-shrink-0', isCurrent ? 'text-accent-glow' : watched ? 'text-green-400' : 'text-text-muted')}>
-                {watched && !isCurrent ? <CheckCircle className="w-3.5 h-3.5 stroke-[1.5]" /> : <><Hash className="w-3 h-3 stroke-[1.5]" /><span className="font-mono text-xs ml-0.5">{ep.episode}</span></>}
+              <span className={cn(
+                'w-8 flex items-center justify-center flex-shrink-0 font-display text-sm font-semibold transition-colors duration-200',
+                isCurrent ? 'text-accent-glow text-base' : 'text-accent-primary/80 group-hover:text-accent-glow'
+              )}>
+                {ep.episode}
               </span>
               <div className="flex-1 min-w-0 flex items-center gap-2">
                 <span className={cn('text-sm line-clamp-1', isCurrent ? 'text-text-primary font-medium' : 'text-text-secondary')}>

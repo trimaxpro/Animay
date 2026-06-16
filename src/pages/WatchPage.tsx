@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { VideoPlayer } from '@/components/watch/VideoPlayer';
 import { EpisodeList } from '@/components/watch/EpisodeList';
@@ -134,7 +134,31 @@ export default function WatchPage() {
 
           {/* Sidebar: episodes */}
           <div className="lg:w-[380px] flex-shrink-0">
-            <div>
+            <div className="space-y-6">
+              {/* Anime Quick Info Panel */}
+              {anime && (
+                <div className="flex items-center gap-3 p-3 glass-card rounded-card border border-border-subtle bg-elevated/20">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-border-glow shadow-glow-sm flex-shrink-0 bg-void">
+                    <img 
+                      src={anime.images.webp?.image_url || anime.images.jpg?.image_url} 
+                      alt={anime.title} 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/anime/${anime.mal_id}`} className="font-display font-semibold text-text-primary text-sm hover:text-accent-glow transition-colors line-clamp-1">
+                      {anime.title_english || anime.title}
+                    </Link>
+                    <p className="text-xs text-text-muted mt-0.5 truncate flex items-center gap-1">
+                      <span>Studio:</span>
+                      <span className="text-text-secondary font-medium">
+                        {anime.studios?.[0]?.name || 'Unknown Studio'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Episodes */}
               <div>
                 <div className="flex items-center justify-between mb-3">

@@ -339,6 +339,31 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
     }
 
+    if (apiPath === "/avatar/waifu" || apiPath === "/random-avatar") {
+      try {
+        const response = await fetch("https://nekos.best/api/v2/neko", {
+          headers: {
+            "User-Agent": "Animay/1.0.0 (https://github.com/trimaxpro/Animay)",
+            "Accept": "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Nekos API returned status ${response.status}`);
+        }
+        const data = await response.json() as any;
+        const imageUrl = data.results?.[0]?.url;
+        if (!imageUrl) {
+          throw new Error("No image URL returned from Nekos API");
+        }
+        return res.status(200).json({ url: imageUrl });
+      } catch (err) {
+        console.error("Failed to fetch random avatar from API, using fallback:", err);
+        return res.status(200).json({
+          url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=150&h=150&fit=crop"
+        });
+      }
+    }
+
     if (apiPath === "/clearcache") {
       cache.clear();
       return res.status(200).json({ status: "ok", message: "Cache cleared" });

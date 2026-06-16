@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Menu, X, BookmarkPlus, Home, Globe, Calendar } from 'lucide-react';
+import { Search, Menu, X, Home, Globe, Calendar, LogIn, BookmarkPlus } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useSearch } from '@/hooks/useSearch';
+import { useAuth } from '@/hooks/useAuth';
 import type { Anime } from '@/types/anime';
 
 const NAV_LINKS = [
@@ -50,9 +51,9 @@ export function Navbar() {
         )}
       >
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-card bg-accent-primary flex items-center justify-center">
-              <span className="font-display font-bold text-white text-lg leading-none">A</span>
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 rounded-card overflow-hidden border border-border-subtle shadow-glow-sm flex-shrink-0 bg-void">
+              <img src="/logo.png" alt="Animay Logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-display font-bold text-xl text-text-primary group-hover:text-accent-glow transition-colors">
               Animay
@@ -139,13 +140,7 @@ export function Navbar() {
               </button>
             </div>
 
-            <Link
-              to="/profile"
-              className="hidden md:flex w-9 h-9 rounded-card items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all relative z-20"
-              aria-label="Watchlist"
-            >
-              <BookmarkPlus className="w-4.5 h-4.5 stroke-[1.5]" />
-            </Link>
+            <AuthNav />
 
             <button
               onClick={() => setMobileOpen(true)}
@@ -203,10 +198,10 @@ export function Navbar() {
                   );
                 })}
                 <Link
-                  to="/profile"
+                  to="/watchlist"
                   className={cn(
                     'flex items-center gap-3 px-3 py-3 rounded-card text-sm font-body font-medium transition-all',
-                    location.pathname === '/profile'
+                    location.pathname === '/watchlist'
                       ? 'text-accent-glow bg-accent-primary/10'
                       : 'text-text-secondary hover:text-text-primary hover:bg-elevated',
                   )}
@@ -220,5 +215,76 @@ export function Navbar() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+function AuthNav() {
+  const { user, loading, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  if (loading) return <div className="w-9 h-9" />;
+
+  if (!user) {
+    return (
+      <Link
+        to="/signin"
+        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-card text-sm font-body font-medium text-text-primary bg-accent-primary hover:bg-accent-glow transition-all"
+      >
+        <LogIn className="w-4 h-4 stroke-[1.5]" />
+        Sign In
+      </Link>
+    );
+  }
+
+  return (
+    <div className="hidden md:relative md:flex">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-9 h-9 rounded-full bg-elevated border border-border-subtle flex items-center justify-center overflow-hidden text-text-secondary hover:text-text-primary hover:border-border-glow transition-all"
+        aria-label="Profile"
+      >
+        {(() => {
+          const name = user.displayName || user.email || 'U';
+          const initial = name.charAt(0).toUpperCase();
+          const colors = [
+            'bg-blue-600 text-white',
+            'bg-violet-600 text-white',
+            'bg-indigo-600 text-white',
+            'bg-fuchsia-600 text-white',
+            'bg-rose-600 text-white',
+            'bg-emerald-600 text-white',
+            'bg-amber-600 text-black',
+            'bg-cyan-600 text-white',
+          ];
+          let hash = 0;
+          const key = user.uid || '';
+          for (let i = 0; i < key.length; i++) {
+            hash = key.charCodeAt(i) + ((hash << 5) - hash);
+          }
+          const colorClass = colors[Math.abs(hash) % colors.length];
+          return (
+            <div className={`w-full h-full flex items-center justify-center font-display font-bold text-sm select-none ${colorClass}`}>
+              {initial}
+            </div>
+          );
+        })()}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-2 w-52 bg-surface rounded-card p-2 z-50 shadow-xl border border-border-subtle">
+            <div className="px-3 py-2 text-sm text-text-primary font-medium truncate border-b border-border-subtle mb-1">
+              {user.displayName || user.email}
+            </div>
+            <Link to="/watchlist" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-input text-sm text-text-secondary hover:text-text-primary hover:bg-elevated transition-colors">
+              <BookmarkPlus className="w-4 h-4 stroke-[1.5]" /> My Lists
+            </Link>
+            <button onClick={() => { logout(); setOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 rounded-input text-sm text-accent-rose hover:bg-accent-rose/10 transition-colors mt-1">
+              <LogIn className="w-4 h-4 stroke-[1.5] rotate-180" /> Sign Out
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
