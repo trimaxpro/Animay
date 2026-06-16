@@ -347,14 +347,14 @@ export default async function handler(req: any, res: any) {
     if (apiPath === "/anime/trending") {
       let items: any[];
       try {
-        const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=bypopularity&limit=20&fields=${LIST_FIELDS}`, malClientId);
+        const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=bypopularity&limit=100&fields=${LIST_FIELDS}`, malClientId);
         items = extractNodes(data).map(normalizeMal);
       } catch (err) {
-        const data = await jikanFetch<{ data: Record<string, unknown>[] }>("/top/anime?filter=bypopularity&limit=20");
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>("/top/anime?filter=bypopularity&limit=25");
         items = data.data.map(normalizeMal);
       }
 
-      const topItems = items.slice(0, 5);
+      const topItems = items.slice(0, 10);
       await Promise.all(topItems.map(async (item) => {
         const alInfo = await fetchAniListInfo(item.mal_id);
         if (alInfo) {
@@ -375,11 +375,11 @@ export default async function handler(req: any, res: any) {
     if (apiPath === "/anime/seasonal") {
       const { current, year } = getSeason();
       try {
-        const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${year}/${current}?limit=24&fields=${LIST_FIELDS}`, malClientId);
+        const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${year}/${current}?limit=100&fields=${LIST_FIELDS}`, malClientId);
         const items = extractNodes(data);
         return res.status(200).json({ data: items.map(normalizeMal) });
       } catch (err) {
-        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${year}/${current}?limit=24`);
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${year}/${current}?limit=25`);
         return res.status(200).json({ data: data.data.map(normalizeMal) });
       }
     }
@@ -387,22 +387,22 @@ export default async function handler(req: any, res: any) {
     if (apiPath === "/anime/upcoming") {
       const { next, nextYear } = getSeason();
       try {
-        const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${nextYear}/${next}?limit=12&fields=${LIST_FIELDS}`, malClientId);
+        const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${nextYear}/${next}?limit=100&fields=${LIST_FIELDS}`, malClientId);
         const items = extractNodes(data);
         return res.status(200).json({ data: items.map(normalizeMal) });
       } catch (err) {
-        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${nextYear}/${next}?limit=12`);
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${nextYear}/${next}?limit=25`);
         return res.status(200).json({ data: data.data.map(normalizeMal) });
       }
     }
 
     if (apiPath === "/anime/top") {
       try {
-        const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=all&limit=10&fields=${LIST_FIELDS}`, malClientId);
+        const data = await malFetch<{ data: { node?: Record<string, unknown>; ranking?: Record<string, unknown> }[] }>(`/anime/ranking?ranking_type=all&limit=100&fields=${LIST_FIELDS}`, malClientId);
         const items = extractNodes(data);
         return res.status(200).json({ data: items.map(normalizeMal) });
       } catch (err) {
-        const data = await jikanFetch<{ data: Record<string, unknown>[] }>("/top/anime?limit=10");
+        const data = await jikanFetch<{ data: Record<string, unknown>[] }>("/top/anime?limit=25");
         return res.status(200).json({ data: data.data.map(normalizeMal) });
       }
     }
@@ -624,14 +624,23 @@ export default async function handler(req: any, res: any) {
 
       const alSeason = bParams.get("season") ? bParams.get("season")!.toUpperCase() : null;
       const alYear = bParams.get("year") ? parseInt(bParams.get("year")!) : null;
-      const alGenres = bParams.get("genres") ? bParams.get("genres")!.split(",") : null;
+      const MAL_GENRE_NAMES: Record<string, string> = {
+        '1': 'Action', '2': 'Adventure', '4': 'Comedy', '8': 'Drama', '9': 'Ecchi',
+        '10': 'Fantasy', '14': 'Horror', '22': 'Romance', '24': 'Sci-Fi', '27': 'Shounen',
+        '30': 'Sports', '36': 'Slice of Life', '37': 'Supernatural', '41': 'Thriller',
+        '62': 'Isekai',
+      };
+      const ANILIST_TAGS = new Set(['Isekai']);
+      const rawGenres = bParams.get("genres") ? bParams.get("genres")!.split(",").map((id) => MAL_GENRE_NAMES[id] || id).filter(Boolean) : null;
+      const alGenreIn = rawGenres?.filter((g) => !ANILIST_TAGS.has(g)) || null;
+      const alTagIn = rawGenres?.filter((g) => ANILIST_TAGS.has(g)) || null;
       const alScore = bParams.get("score") ? parseInt(bParams.get("score")!) * 10 : null;
 
       const alBrowseQuery = `
-        query ($page: Int, $perPage: Int, $sort: [MediaSort], $format: [MediaFormat], $status: MediaStatus, $season: MediaSeason, $seasonYear: Int, $genreIn: [String], $scoreGte: Int) {
+        query ($page: Int, $perPage: Int, $sort: [MediaSort], $format: [MediaFormat], $status: MediaStatus, $season: MediaSeason, $seasonYear: Int, $genreIn: [String], $tagIn: [String], $scoreGte: Int) {
           Page(page: $page, perPage: $perPage) {
             pageInfo { currentPage hasNextPage perPage }
-            media(type: ANIME, sort: $sort, format_in: $format, status: $status, season: $season, seasonYear: $seasonYear, genre_in: $genreIn, averageScore_greater: $scoreGte) {
+            media(type: ANIME, sort: $sort, format_in: $format, status: $status, season: $season, seasonYear: $seasonYear, genre_in: $genreIn, tag_in: $tagIn, averageScore_greater: $scoreGte) {
               id idMal
               title { romaji english native }
               coverImage { large extraLarge }
@@ -661,7 +670,8 @@ export default async function handler(req: any, res: any) {
               status: alStatus || undefined,
               season: alSeason || undefined,
               seasonYear: alYear || undefined,
-              genreIn: alGenres || undefined,
+              genreIn: alGenreIn?.length ? alGenreIn : undefined,
+              tagIn: alTagIn?.length ? alTagIn : undefined,
               scoreGte: alScore || undefined,
             },
           }),

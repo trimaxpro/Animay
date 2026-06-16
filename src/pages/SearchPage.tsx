@@ -13,7 +13,7 @@ export default function SearchPage() {
 
   return (
     <PageWrapper className="pt-24 pb-12 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <SearchBar initialQuery={query} />
 
         <div className="mt-8">

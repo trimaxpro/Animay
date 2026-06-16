@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, ChevronDown, Star, Info } from 'lucide-react';
+import { Play, ChevronDown, Star, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { HeroSkeleton } from '@/components/ui/Skeleton';
-import { useWatchlist } from '@/hooks/useWatchlist';
+
 import { useAnimeTheme } from '@/hooks/useAnimeTheme';
 import type { Anime } from '@/types/anime';
 
@@ -17,34 +17,22 @@ interface HeroSectionProps {
 
 function HeroBackground({ anime: featured }: { anime: Anime }) {
   const { data: themeUrl } = useAnimeTheme(featured?.anilist_id);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const bannerUrl = featured?.banner_image || featured?.images?.jpg?.large_image_url || '';
-
-  useEffect(() => {
-    if (videoRef.current && themeUrl) {
-      videoRef.current.src = themeUrl;
-      videoRef.current.play().catch(() => {});
-    }
-  }, [themeUrl]);
+  const [ready, setReady] = useState(false);
 
   return (
     <div className="absolute inset-0">
       {themeUrl ? (
         <video
-          ref={videoRef}
           autoPlay
           muted
           loop
           playsInline
-          className="absolute inset-0 w-full h-full object-cover scale-[1.02]"
+          preload="auto"
+          className={`absolute inset-0 w-full h-full object-cover scale-[1.02] transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
+          onCanPlay={(e) => { setReady(true); (e.target as HTMLVideoElement).play().catch(() => {}); }}
         >
           <source src={themeUrl} type="video/webm" />
         </video>
-      ) : bannerUrl ? (
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-void"
-          style={{ backgroundImage: `url(${bannerUrl})` }}
-        />
       ) : null}
       <div className="absolute inset-0 bg-gradient-to-r from-void via-void/80 to-void/40" />
       <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/30" />
@@ -53,7 +41,6 @@ function HeroBackground({ anime: featured }: { anime: Anime }) {
 }
 
 export function HeroSection({ anime, isLoading }: HeroSectionProps) {
-  const { toggleWatchlist, isInWatchlist } = useWatchlist();
   const [current, setCurrent] = useState(0);
 
   const nextSlide = useCallback(() => {
@@ -141,18 +128,6 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
                     Details
                   </Button>
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => toggleWatchlist({
-                    malId: featured.mal_id,
-                    title: featured.title_english || featured.title,
-                    image: featured.images.jpg?.image_url || '',
-                  })}
-                >
-                  <Plus className="w-5 h-5" />
-                  {isInWatchlist(featured.mal_id) ? 'In List' : 'Add to List'}
-                </Button>
               </div>
             </motion.div>
           </AnimatePresence>

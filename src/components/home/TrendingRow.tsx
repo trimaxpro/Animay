@@ -11,13 +11,14 @@ interface TrendingRowProps {
   anime: Anime[];
   isLoading: boolean;
   showRank?: boolean;
+  fetchNext?: () => void;
 }
 
 const titleIcons: Record<string, typeof Flame> = {
   'Trending': Flame, 'Popular': TrendingUp, 'Upcoming': Star,
 };
 
-export function TrendingRow({ title, anime, isLoading, showRank = false }: TrendingRowProps) {
+export function TrendingRow({ title, anime, isLoading, showRank = false, fetchNext }: TrendingRowProps) {
   const { toggleWatchlist } = useWatchlist();
   const TitleIcon = Object.entries(titleIcons).find(([k]) => title.includes(k))?.[1] || TrendingUp;
 
@@ -29,7 +30,7 @@ export function TrendingRow({ title, anime, isLoading, showRank = false }: Trend
           {Array.from({ length: 6 }).map((_, i) => <AnimeCardSkeleton key={i} />)}
         </div>
       ) : (
-        <ScrollableRow>
+        <ScrollableRow onEndReached={fetchNext}>
           {anime.map((item, i) => (
             <motion.div
               key={item.mal_id}

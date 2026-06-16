@@ -52,44 +52,40 @@ export function ScrollRow({ title, children, className }: ScrollRowProps) {
       onMouseLeave={() => setHovered(false)}
     >
       <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 flex items-center gap-2"><RowIcon className="w-5 h-5 text-accent-glow stroke-[1.5]" /> {title}</h2>
-      <div className="relative group/row">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => scroll('left')}
           disabled={!canScrollLeft}
           className={cn(
-            'absolute left-0 inset-y-0 z-10 w-12 flex items-center justify-center transition-all duration-200',
+            'shrink-0 w-10 h-10 rounded-full flex items-center justify-center border border-border-subtle bg-elevated/90 text-text-secondary hover:text-text-primary hover:border-border-glow hover:bg-elevated transition-all shadow-lg backdrop-blur-sm',
             canScrollLeft && hovered
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 pointer-events-none',
           )}
           aria-label="Previous"
         >
-          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-elevated/90 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-glow hover:bg-elevated transition-all shadow-lg backdrop-blur-sm">
-            <ChevronLeft className="w-5 h-5 stroke-[1.5]" />
-          </div>
+          <ChevronLeft className="w-5 h-5 stroke-[1.5]" />
         </button>
+        <div
+          ref={scrollRef}
+          className="flex-1 min-w-0 flex gap-4 overflow-x-auto pb-2 scroll-smooth"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {children}
+        </div>
         <button
           onClick={() => scroll('right')}
           disabled={!canScrollRight}
           className={cn(
-            'absolute right-0 inset-y-0 z-10 w-12 flex items-center justify-center transition-all duration-200',
+            'shrink-0 w-10 h-10 rounded-full flex items-center justify-center border border-border-subtle bg-elevated/90 text-text-secondary hover:text-text-primary hover:border-border-glow hover:bg-elevated transition-all shadow-lg backdrop-blur-sm',
             canScrollRight && hovered
               ? 'opacity-100 pointer-events-auto'
               : 'opacity-0 pointer-events-none',
           )}
           aria-label="Next"
         >
-          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-elevated/90 border border-border-subtle text-text-secondary hover:text-text-primary hover:border-border-glow hover:bg-elevated transition-all shadow-lg backdrop-blur-sm">
-            <ChevronRight className="w-5 h-5 stroke-[1.5]" />
-          </div>
+          <ChevronRight className="w-5 h-5 stroke-[1.5]" />
         </button>
-        <div
-          ref={scrollRef}
-          className="flex gap-4 overflow-x-auto pb-2 scroll-smooth"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {children}
-        </div>
       </div>
     </section>
   );

@@ -47,8 +47,8 @@ function AnimeCardInner({ anime, onAddToWatchlist, className }: AnimeCardProps) 
         </div>
 
         <div className="absolute top-2 left-2 flex flex-col gap-1">
-          {anime.type && <Badge variant="violet">{anime.type}</Badge>}
-          {anime.status === 'Currently Airing' && <Badge variant="rose">Airing</Badge>}
+          {anime.type && <Badge>{anime.type}</Badge>}
+          {anime.status === 'Currently Airing' && <Badge>Airing</Badge>}
         </div>
 
         <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

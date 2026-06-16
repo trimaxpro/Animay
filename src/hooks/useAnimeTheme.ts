@@ -54,7 +54,36 @@ const QUERY = `
   }
 `;
 
-async function fetchThemeUrl(anilistId: number): Promise<string | null> {
+const CACHE_PREFIX = 'at_';
+const CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+
+interface CacheEntry {
+  url: string | null;
+  ts: number;
+}
+
+function getLocal(id: number): string | null | undefined {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + id);
+    if (!raw) return undefined;
+    const entry: CacheEntry = JSON.parse(raw);
+    if (Date.now() - entry.ts > CACHE_TTL) {
+      localStorage.removeItem(CACHE_PREFIX + id);
+      return undefined;
+    }
+    return entry.url;
+  } catch {
+    return undefined;
+  }
+}
+
+function setLocal(id: number, url: string | null) {
+  try {
+    localStorage.setItem(CACHE_PREFIX + id, JSON.stringify({ url, ts: Date.now() }));
+  } catch {}
+}
+
+export async function fetchThemeUrl(anilistId: number): Promise<string | null> {
   const res = await fetch('https://graphql.animethemes.moe/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -70,21 +99,25 @@ async function fetchThemeUrl(anilistId: number): Promise<string | null> {
     for (const entry of theme.animethemeentries) {
       const videos = entry.videos?.nodes || [];
       const preferred = videos.find((v) => v.resolution >= 1080 && !v.tags?.includes('BGM'));
-      if (preferred?.link) return preferred.link;
+      if (preferred?.link) { setLocal(anilistId, preferred.link); return preferred.link; }
       const anyVideo = videos.find((v) => v.link);
-      if (anyVideo?.link) return anyVideo.link;
+      if (anyVideo?.link) { setLocal(anilistId, anyVideo.link); return anyVideo.link; }
     }
   }
+  setLocal(anilistId, null);
   return null;
 }
 
 export function useAnimeTheme(anilistId: number | undefined) {
+  const cached = anilistId ? getLocal(anilistId) : undefined;
+
   return useQuery({
     queryKey: ['animeTheme', anilistId],
     queryFn: () => fetchThemeUrl(anilistId!),
     enabled: !!anilistId,
-    staleTime: 60 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: CACHE_TTL,
     retry: 1,
+    placeholderData: cached !== undefined ? cached : undefined,
   });
 }

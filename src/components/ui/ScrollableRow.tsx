@@ -5,20 +5,34 @@ import { cn } from '@/utils/cn';
 interface ScrollableRowProps {
   children: React.ReactNode;
   className?: string;
+  onEndReached?: () => void;
 }
 
-export function ScrollableRow({ children, className }: ScrollableRowProps) {
+const END_THRESHOLD = 400;
+const LOADING_LOCK_MS = 1500;
+
+export function ScrollableRow({ children, className, onEndReached }: ScrollableRowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [hovered, setHovered] = useState(false);
+  const loadingLockRef = useRef(false);
 
   const updateScrollState = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 4);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
+
+    if (onEndReached && !loadingLockRef.current) {
+      const remaining = el.scrollWidth - el.scrollLeft - el.clientWidth;
+      if (remaining < END_THRESHOLD) {
+        loadingLockRef.current = true;
+        setTimeout(() => { loadingLockRef.current = false; }, LOADING_LOCK_MS);
+        onEndReached();
+      }
+    }
+  }, [onEndReached]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -38,43 +52,39 @@ export function ScrollableRow({ children, className }: ScrollableRowProps) {
 
   return (
     <div
-      className={cn('relative', className)}
+      className={cn('flex items-center gap-2', className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {canScrollLeft && (
-        <button
-          onClick={() => scroll('left')}
-          className={cn(
-            'absolute left-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center bg-gradient-to-r from-void/90 to-transparent transition-opacity duration-300',
-            hovered ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          <div className="w-8 h-8 rounded-full bg-elevated/90 border border-border-subtle flex items-center justify-center hover:bg-accent-primary/20 hover:border-border-glow transition-colors">
-            <ChevronLeft className="w-4 h-4 text-text-primary stroke-[1.5]" />
-          </div>
-        </button>
-      )}
+      <button
+        onClick={() => scroll('left')}
+        disabled={!canScrollLeft}
+        className={cn(
+          'shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border-subtle bg-elevated/90 text-text-secondary hover:text-text-primary hover:border-border-glow hover:bg-elevated transition-all shadow-lg backdrop-blur-sm',
+          canScrollLeft && hovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        )}
+        aria-label="Previous"
+      >
+        <ChevronLeft className="w-4 h-4 stroke-[1.5]" />
+      </button>
       <div
         ref={containerRef}
-        className="flex gap-3 overflow-x-auto scroll-smooth pb-1"
+        className="flex-1 min-w-0 flex gap-3 overflow-x-auto scroll-smooth pb-1"
         style={{ scrollbarWidth: 'none' }}
       >
         {children}
       </div>
-      {canScrollRight && (
-        <button
-          onClick={() => scroll('right')}
-          className={cn(
-            'absolute right-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center bg-gradient-to-l from-void/90 to-transparent transition-opacity duration-300',
-            hovered ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          <div className="w-8 h-8 rounded-full bg-elevated/90 border border-border-subtle flex items-center justify-center hover:bg-accent-primary/20 hover:border-border-glow transition-colors">
-            <ChevronRight className="w-4 h-4 text-text-primary stroke-[1.5]" />
-          </div>
-        </button>
-      )}
+      <button
+        onClick={() => scroll('right')}
+        disabled={!canScrollRight}
+        className={cn(
+          'shrink-0 w-8 h-8 rounded-full flex items-center justify-center border border-border-subtle bg-elevated/90 text-text-secondary hover:text-text-primary hover:border-border-glow hover:bg-elevated transition-all shadow-lg backdrop-blur-sm',
+          canScrollRight && hovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        )}
+        aria-label="Next"
+      >
+        <ChevronRight className="w-4 h-4 stroke-[1.5]" />
+      </button>
     </div>
   );
 }

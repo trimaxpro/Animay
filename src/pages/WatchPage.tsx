@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { VideoPlayer } from '@/components/watch/VideoPlayer';
 import { EpisodeList } from '@/components/watch/EpisodeList';
@@ -15,6 +15,7 @@ import { cn } from '@/utils/cn';
 
 const SERVERS = [
   { id: 'mal', label: 'MegaPlay', icon: Monitor },
+  { id: 'animeplay', label: 'AnimePlay', icon: Globe },
   { id: 'filmu', label: 'FilmU', icon: Server },
   { id: 'embed', label: 'TryEmbed', icon: Globe },
   { id: 'anikoto', label: 'Anikoto', icon: Server },
@@ -39,6 +40,8 @@ export default function WatchPage() {
   const anilistId = anime?.anilist_id || animeId;
   const embedUrl = server === 'mal'
     ? `https://megaplay.buzz/stream/mal/${animeId}/${episodeNum}/sub`
+    : server === 'animeplay'
+    ? `https://animeplay.cfd/stream/mal/${animeId}/${episodeNum}/sub`
     : server === 'filmu'
     ? `https://embed.filmu.in/embed/anime/${anilistId}/${episodeNum}/sub`
     : server === 'anikoto'
@@ -131,28 +134,7 @@ export default function WatchPage() {
 
           {/* Sidebar: episodes */}
           <div className="lg:w-[380px] flex-shrink-0">
-            <div className="space-y-6">
-              {/* Anime info card */}
-              {anime && (
-                <div className="glass-card rounded-card p-3 flex items-center gap-3">
-                  <img
-                    src={anime.images.jpg?.image_url}
-                    alt={anime.title}
-                    className="w-12 h-16 rounded-card object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-display font-semibold text-sm text-text-primary line-clamp-2 leading-snug">
-                      {anime.title_english || anime.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
-                      <span className="font-mono">EP {episodeNum}/{anime.episodes || episodes.data?.length || '?'}</span>
-                      <span>•</span>
-                      <Link to={`/anime/${animeId}`} className="text-accent-glow hover:underline">Details</Link>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+            <div>
               {/* Episodes */}
               <div>
                 <div className="flex items-center justify-between mb-3">

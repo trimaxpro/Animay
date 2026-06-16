@@ -89,6 +89,16 @@ export function useBrowse(params: Omit<animeApi.BrowseParams, 'page' | 'perPage'
   });
 }
 
+export function useTrendingNow() {
+  return useQuery({
+    queryKey: ['anime', 'trendingNow'],
+    queryFn: animeApi.getTrendingNow,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+  });
+}
+
 export function useRecommendations(id: number) {
   return useQuery({
     queryKey: ['anime', 'recommendations', id],

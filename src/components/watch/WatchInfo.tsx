@@ -24,37 +24,35 @@ export function WatchInfo({ animeId, animeTitle, animeImage, episode, totalEpiso
   const descTruncated = description && description.length > 280;
 
   return (
-    <div>
-      {/* Title + metadata + Add to List row */}
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-xs text-text-muted mb-1.5">
-            <span className="flex items-center gap-1">
-              <Film className="w-3 h-3 stroke-[1.5]" />
-              EP {currentEpisode}/{totalEpisodes}
-            </span>
-            {episode.aired && (
-              <>
-                <span className="text-border-subtle">•</span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 stroke-[1.5]" />
-                  {new Date(episode.aired).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </span>
-              </>
-            )}
-          </div>
-          <h1 className="font-display font-bold text-2xl text-text-primary leading-tight">
-            {episode.title || `Episode ${episode.episode}`}
-          </h1>
-          <Link to={`/anime/${animeId}`} className="text-sm text-text-muted hover:text-accent-glow transition-colors mt-0.5 inline-block">
-            {animeTitle}
-          </Link>
+    <div className="mt-4 space-y-6">
+      {/* Episode title + metadata */}
+      <div>
+        <div className="flex items-center gap-3 text-sm text-text-muted mb-2">
+          <span className="flex items-center gap-1.5">
+            <Film className="w-4 h-4 stroke-[1.5]" />
+            EP {currentEpisode}/{totalEpisodes}
+          </span>
+          {episode.aired && (
+            <>
+              <span className="text-border-subtle">•</span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 stroke-[1.5]" />
+                {new Date(episode.aired).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </>
+          )}
         </div>
+        <h1 className="font-display font-bold text-2xl md:text-3xl text-text-primary leading-tight mb-1.5">
+          {episode.title || `Episode ${episode.episode}`}
+        </h1>
+        <Link to={`/anime/${animeId}`} className="text-sm text-text-muted hover:text-accent-glow transition-colors inline-flex items-center gap-1.5">
+          {animeTitle}
+        </Link>
         <Button
           variant={inList ? 'secondary' : 'primary'}
           size="sm"
           onClick={() => toggleWatchlist({ malId: animeId, title: animeTitle, image: animeImage })}
-          className="flex-shrink-0"
+          className="ml-3"
         >
           {inList ? <Check className="w-4 h-4 stroke-[1.5]" /> : <BookmarkPlus className="w-4 h-4 stroke-[1.5]" />}
           {inList ? 'In List' : 'Add to List'}
@@ -62,7 +60,7 @@ export function WatchInfo({ animeId, animeTitle, animeImage, episode, totalEpiso
       </div>
 
       {/* Prev / Next navigation */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3">
         {hasPrev ? (
           <Link to={`/watch/${animeId}/${currentEpisode - 1}`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-card bg-elevated border border-border-subtle text-sm text-text-secondary hover:border-border-glow hover:text-text-primary transition-all"

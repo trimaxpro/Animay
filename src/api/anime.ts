@@ -40,6 +40,11 @@ export async function getSkipTimes(malId: number, episode: number) {
   }
 }
 
+export async function getTrendingNow(): Promise<Anime[]> {
+  const { data } = await apiClient.get<BrowseResult>('/browse?sort=trending&perPage=20');
+  return data.data;
+}
+
 export async function getRecommendations(id: number): Promise<Anime[]> {
   const { data } = await apiClient.get<{ data: { entry: Anime }[] }>(`/anime/${id}/recommendations`);
   return data.data?.map((r: { entry: Anime }) => r.entry) || [];

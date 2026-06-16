@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, BookmarkPlus, Home, Grid3X3, Calendar } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { useSearch } from '@/hooks/useSearch';
+import type { Anime } from '@/types/anime';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', icon: Home },
@@ -15,6 +17,7 @@ export function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: searchResults } = useSearch(searchQuery, 1);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -77,35 +80,64 @@ export function Navbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-2 relative">
-            <AnimatePresence>
-              {searchOpen && (
-                <motion.form
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 240, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  onSubmit={handleSearch}
-                  className="overflow-hidden absolute right-0 top-1/2 -translate-y-1/2 z-10"
-                >
-                  <input
-                    autoFocus
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search anime..."
-                    className="w-full bg-elevated border border-border-subtle rounded-input pl-3 pr-12 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary"
-                  />
-                </motion.form>
-              )}
-            </AnimatePresence>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
+              <AnimatePresence>
+                {searchOpen && (
+                  <motion.form
+                    initial={{ width: 0, opacity: 0 }}
+                    animate={{ width: 240, opacity: 1 }}
+                    exit={{ width: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onSubmit={handleSearch}
+                    className="absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 overflow-hidden"
+                  >
+                    <input
+                      autoFocus
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search anime..."
+                      className="w-full bg-elevated border border-border-subtle rounded-input pl-3 pr-12 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary"
+                    />
+                  </motion.form>
+                )}
+              </AnimatePresence>
 
-            <button
-              onClick={() => setSearchOpen(!searchOpen)}
-              className="w-9 h-9 rounded-card flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all relative z-20"
-              aria-label="Search"
-            >
-              <Search className="w-4.5 h-4.5 stroke-[1.5]" />
-            </button>
+              {searchOpen && searchQuery.trim().length > 0 && searchResults?.data && searchResults.data.length > 0 && (
+                <div className="absolute right-[calc(100%+8px)] top-full mt-1 w-60 bg-surface rounded-card p-2 z-50 max-h-[400px] overflow-y-auto shadow-xl border border-border-subtle">
+                  {searchResults.data.slice(0, 5).map((anime: Anime) => (
+                    <Link
+                      key={anime.mal_id}
+                      to={`/anime/${anime.mal_id}`}
+                      onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                      className="flex items-center gap-3 p-2 rounded-input hover:bg-elevated transition-colors"
+                    >
+                      <img src={anime.images.jpg?.image_url} alt="" className="w-8 h-12 rounded-input object-cover" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text-primary line-clamp-1">{anime.title_english || anime.title}</p>
+                        <p className="text-xs text-text-muted">{anime.type} {anime.year && `| ${anime.year}`}</p>
+                      </div>
+                      {anime.score && <span className="text-xs font-mono text-accent-amber">{anime.score.toFixed(1)}</span>}
+                    </Link>
+                  ))}
+                  <Link
+                    to={`/search?q=${encodeURIComponent(searchQuery)}`}
+                    onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                    className="block text-center text-sm text-accent-glow hover:underline py-2 mt-1 border-t border-border-subtle"
+                  >
+                    See all results
+                  </Link>
+                </div>
+              )}
+
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className={cn('w-9 h-9 rounded-card flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all', searchOpen && 'bg-elevated')}
+                aria-label="Search"
+              >
+                <Search className="w-4.5 h-4.5 stroke-[1.5]" />
+              </button>
+            </div>
 
             <Link
               to="/profile"
