@@ -32,8 +32,8 @@ export default function SchedulePage() {
       <div className="relative mb-8 px-4">
         <DotPattern opacity={0.3} />
         <div className="relative z-10 max-w-7xl mx-auto">
-          <h1 className="font-display font-bold text-3xl md:text-4xl text-text-primary ml-10 flex items-center gap-3"><CalendarDays className="w-8 h-8 text-accent-glow stroke-[1.5]" /> Airing Schedule</h1>
-          <p className="text-text-secondary text-sm mt-1 ml-10 flex items-center gap-1.5"><Radio className="w-4 h-4 text-accent-glow stroke-[1.5]" /> Stay up to date with your favorite shows</p>
+          <h1 className="font-display font-bold text-3xl md:text-4xl text-text-primary flex items-center gap-3"><CalendarDays className="w-8 h-8 text-accent-glow stroke-[1.5]" /> Airing Schedule</h1>
+          <p className="text-text-secondary text-sm mt-1 flex items-center gap-1.5"><Radio className="w-4 h-4 text-accent-glow stroke-[1.5]" /> Stay up to date with your favorite shows</p>
         </div>
       </div>
 
