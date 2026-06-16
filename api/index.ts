@@ -343,7 +343,7 @@ export default async function handler(req: any, res: any) {
       try {
         const response = await fetch("https://nekos.best/api/v2/neko", {
           headers: {
-            "User-Agent": "Animay/1.0.0 (https://github.com/trimaxpro/Animay)",
+            "User-Agent": "MikuAnime/1.0.0 (https://github.com/trimaxpro/MikuAnime)",
             "Accept": "application/json",
           },
         });
