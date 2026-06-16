@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import * as animeApi from '@/api/anime';
 
 export function useTrending() {
@@ -74,6 +74,20 @@ export function useSkipTimes(malId: number, episode: number) {
   });
 }
 
+export function useBrowse(params: Omit<animeApi.BrowseParams, 'page' | 'perPage'>) {
+  return useInfiniteQuery<animeApi.BrowseResult>({
+    queryKey: ['browse', params],
+    queryFn: ({ pageParam = 1 }) => animeApi.getBrowse({ ...params, page: pageParam as number, perPage: 30 }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => lastPage.pagination.has_next_page ? lastPage.pagination.current_page + 1 : undefined,
+    staleTime: 0,
+    refetchOnMount: true,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 4000),
+  });
+}
+
 export function useRecommendations(id: number) {
   return useQuery({
     queryKey: ['anime', 'recommendations', id],
@@ -84,13 +98,3 @@ export function useRecommendations(id: number) {
   });
 }
 
-export function useBrowse(params: animeApi.BrowseParams) {
-  return useQuery({
-    queryKey: ['browse', params],
-    queryFn: () => animeApi.getBrowse(params),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 3,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
-  });
-}

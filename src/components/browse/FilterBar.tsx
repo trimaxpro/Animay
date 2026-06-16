@@ -1,223 +1,283 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { List, Radio, CalendarDays, Calendar, Tag, ArrowUpDown, ChevronDown, X, RotateCcw } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { ChevronDown, Tv, Heart, CalendarDays, Star, Tag, RotateCcw } from 'lucide-react';
-import { ANIME_TYPES, ANIME_STATUS, SEASONS, SCORE_FILTERS, GENRES } from '@/utils/constants';
-import type { FilterState } from './FilterPanel';
+import { GENRES, ANIME_TYPES, ANIME_STATUS, SEASONS, SORT_OPTIONS } from '@/utils/constants';
+
+export interface FilterState {
+  type: string | null;
+  status: string | null;
+  season: string | null;
+  year: string | null;
+  genres: string[];
+  sort: string;
+}
 
 interface FilterBarProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
+  totalResults?: number;
 }
 
-interface DropdownProps {
-  label: React.ReactNode;
-  activeLabel: string;
-  isActive: boolean;
-  isOpen: boolean;
-  onToggle: () => void;
-  children: React.ReactNode;
-}
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: currentYear - 1969 }, (_, i) => String(1970 + i)).reverse();
 
-function FilterDropdown({ label, activeLabel, isActive, isOpen, onToggle, children }: DropdownProps) {
+const FILTER_CONFIG = [
+  { key: 'type' as const, label: 'Type', icon: List, options: ANIME_TYPES as readonly string[] },
+  { key: 'status' as const, label: 'Status', icon: Radio, options: ANIME_STATUS as readonly string[] },
+  { key: 'season' as const, label: 'Season', icon: CalendarDays, options: SEASONS as readonly string[] },
+  { key: 'year' as const, label: 'Year', icon: Calendar, options: YEARS },
+] as const;
+
+function FilterDropdown({ label, icon: Icon, value, options, onSelect, onClear }: {
+  label: string;
+  icon: typeof List;
+  value: string | null;
+  options: readonly string[];
+  onSelect: (v: string) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <button
-        onClick={onToggle}
+        onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-input text-xs font-body transition-all whitespace-nowrap',
-          isActive
-            ? 'bg-accent-primary/20 text-accent-glow border border-accent-primary/30'
-            : 'bg-elevated text-text-secondary border border-border-subtle hover:border-border-glow hover:text-text-primary',
+          'flex items-center gap-1.5 px-3 py-2 rounded-card text-xs font-body font-medium transition-all duration-200 border',
+          value
+            ? 'bg-accent-primary/10 text-accent-glow border-accent-primary/30'
+            : 'bg-elevated text-text-secondary border-border-subtle hover:border-border-glow hover:text-text-primary',
         )}
       >
-        <span>{label}:&nbsp;<span className="font-medium">{activeLabel}</span></span>
-        <ChevronDown className={cn('w-3 h-3 stroke-[1.5] transition-transform', isOpen && 'rotate-180')} />
+        <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
+        <span className="hidden sm:inline">{value || label}</span>
+        <span className="sm:hidden">{value || label}</span>
+        <ChevronDown className={cn('w-3 h-3 stroke-[1.5] transition-transform duration-200', open && 'rotate-180')} />
       </button>
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 z-50 min-w-[160px] glass-card rounded-card p-2 border border-border-subtle animate-fade-in">
-          {children}
-        </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute top-full left-0 mt-1 z-50 min-w-[160px] bg-surface border border-border-subtle rounded-card shadow-xl overflow-hidden"
+          >
+            <div className="py-1 max-h-[240px] overflow-y-auto">
+              <button
+                onClick={() => { onClear(); setOpen(false); }}
+                className={cn(
+                  'w-full flex items-center gap-2 px-3 py-2 text-xs font-body transition-colors text-left',
+                  !value ? 'text-accent-glow bg-accent-primary/5' : 'text-text-secondary hover:text-text-primary hover:bg-elevated',
+                )}
+              >
+                All {label}
+              </button>
+              {options.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => { onSelect(opt); setOpen(false); }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-3 py-2 text-xs font-body transition-colors text-left',
+                    value === opt ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated',
+                  )}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function SortDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const currentLabel = SORT_OPTIONS.find((o) => o.value === value)?.label || 'Popularity';
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-card text-xs font-body font-medium transition-all duration-200 border bg-accent-primary/10 text-accent-glow border-accent-primary/30"
+      >
+        <ArrowUpDown className="w-3.5 h-3.5 stroke-[1.5]" />
+        <span className="hidden sm:inline">{currentLabel}</span>
+        <span className="sm:hidden">Sort</span>
+        <ChevronDown className={cn('w-3 h-3 stroke-[1.5] transition-transform duration-200', open && 'rotate-180')} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-surface border border-border-subtle rounded-card shadow-xl overflow-hidden"
+          >
+            <div className="py-1">
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => { onChange(opt.value); setOpen(false); }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-3 py-2 text-xs font-body transition-colors text-left',
+                    value === opt.value ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated',
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function GenrePills({ selected, onToggle }: { selected: string[]; onToggle: (genre: string) => void }) {
+  const [showAll, setShowAll] = useState(false);
+  const display = showAll ? GENRES : GENRES.slice(0, 8);
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Tag className="w-3.5 h-3.5 text-text-muted stroke-[1.5] flex-shrink-0" />
+      {display.map((g) => (
+        <button
+          key={g.name}
+          onClick={() => onToggle(g.name)}
+          className={cn(
+            'px-2.5 py-1 rounded-input text-xs font-body font-medium transition-all duration-200 border',
+            selected.includes(g.name)
+              ? 'bg-accent-primary/15 text-accent-glow border-accent-primary/30 shadow-glow-sm'
+              : 'bg-elevated text-text-secondary border-border-subtle hover:border-border-glow hover:text-text-primary',
+          )}
+        >
+          {g.name}
+        </button>
+      ))}
+      {GENRES.length > 8 && (
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="px-2.5 py-1 rounded-input text-xs font-body font-medium text-text-muted hover:text-accent-glow transition-colors"
+        >
+          {showAll ? 'Show less' : `+${GENRES.length - 8} more`}
+        </button>
       )}
     </div>
   );
 }
 
-export function FilterBar({ filters, onChange }: FilterBarProps) {
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const ref = useRef<HTMLDivElement>(null);
+export function FilterBar({ filters, onChange, totalResults }: FilterBarProps) {
+  const activeCount = [filters.type, filters.status, filters.season, filters.year].filter(Boolean).length + filters.genres.length;
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  const updateFilter = useCallback(<K extends keyof FilterState>(key: K, value: FilterState[K]) => {
+    onChange({ ...filters, [key]: value });
+  }, [filters, onChange]);
 
-  const update = (partial: Partial<FilterState>) => onChange({ ...filters, ...partial });
+  const clearFilter = useCallback((key: keyof FilterState) => {
+    if (key === 'genres') updateFilter('genres', []);
+    else if (key === 'sort') updateFilter('sort', 'score');
+    else updateFilter(key, null);
+  }, [updateFilter]);
 
-  const toggle = (key: string) => setOpenDropdown(openDropdown === key ? null : key);
+  const clearAll = useCallback(() => {
+    onChange({ type: null, status: null, season: null, year: null, genres: [], sort: 'score' });
+  }, [onChange]);
 
-  const close = () => setOpenDropdown(null);
-
-  const clearAll = () => {
-    onChange({ type: '', status: '', season: '', year: '', score: '', genres: [], sort: 'popularity' });
-    close();
-  };
-
-  const toggleGenre = (id: string) => {
-    const genres = filters.genres.includes(id)
-      ? filters.genres.filter((g) => g !== id)
-      : [...filters.genres, id];
-    update({ genres });
-  };
-
-  const hasActive = filters.type || filters.status || filters.season || filters.score || filters.genres.length > 0;
-
-  const activeCount = [filters.type, filters.status, filters.season, filters.score].filter(Boolean).length + (filters.genres.length > 0 ? 1 : 0);
+  const activeFilters: { key: keyof FilterState; label: string; value: string }[] = [];
+  if (filters.type) activeFilters.push({ key: 'type', label: 'Type', value: filters.type });
+  if (filters.status) activeFilters.push({ key: 'status', label: 'Status', value: filters.status });
+  if (filters.season) activeFilters.push({ key: 'season', label: 'Season', value: filters.season });
+  if (filters.year) activeFilters.push({ key: 'year', label: 'Year', value: filters.year });
+  filters.genres.forEach((g) => activeFilters.push({ key: 'genres', label: 'Genre', value: g }));
 
   return (
-    <div ref={ref}>
-      <div className="glass-card rounded-card p-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <FilterDropdown
-            label={<span className="flex items-center gap-1"><Tv className="w-3 h-3 stroke-[1.5]" /> Type</span>}
-            activeLabel={filters.type || 'All'}
-            isActive={!!filters.type}
-            isOpen={openDropdown === 'type'}
-            onToggle={() => toggle('type')}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {FILTER_CONFIG.map((cfg) => (
+            <FilterDropdown
+              key={cfg.key}
+              label={cfg.label}
+              icon={cfg.icon}
+              value={filters[cfg.key]}
+              options={cfg.options}
+              onSelect={(v) => updateFilter(cfg.key, v)}
+              onClear={() => clearFilter(cfg.key)}
+            />
+          ))}
+        </div>
+        <SortDropdown value={filters.sort} onChange={(v) => updateFilter('sort', v)} />
+      </div>
+
+      <GenrePills selected={filters.genres} onToggle={(g) => {
+        const next = filters.genres.includes(g) ? filters.genres.filter((x) => x !== g) : [...filters.genres, g];
+        updateFilter('genres', next);
+      }} />
+
+      <AnimatePresence>
+        {activeFilters.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-wrap items-center gap-1.5 overflow-hidden"
           >
-            <button
-              onClick={() => { update({ type: '' }); close(); }}
-              className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', !filters.type ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-            >
-              All
-            </button>
-            {ANIME_TYPES.map((t) => (
-              <button
-                key={t}
-                onClick={() => { update({ type: filters.type === t ? '' : t }); close(); }}
-                className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', filters.type === t ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
+            {activeFilters.map((f) => (
+              <span
+                key={`${f.key}-${f.value}`}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-input text-xs font-body font-medium bg-accent-primary/10 text-accent-glow border border-accent-primary/20"
               >
-                {t}
-              </button>
+                {f.value}
+                <button onClick={() => {
+                  if (f.key === 'genres') updateFilter('genres', filters.genres.filter((g) => g !== f.value));
+                  else clearFilter(f.key);
+                }} className="hover:text-white transition-colors">
+                  <X className="w-3 h-3 stroke-[1.5]" />
+                </button>
+              </span>
             ))}
-          </FilterDropdown>
-
-          <FilterDropdown
-            label={<span className="flex items-center gap-1"><Heart className="w-3 h-3 stroke-[1.5]" /> Status</span>}
-            activeLabel={filters.status || 'All'}
-            isActive={!!filters.status}
-            isOpen={openDropdown === 'status'}
-            onToggle={() => toggle('status')}
-          >
-            <button
-              onClick={() => { update({ status: '' }); close(); }}
-              className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', !filters.status ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-            >
-              All
-            </button>
-            {ANIME_STATUS.map((s) => (
-              <button
-                key={s}
-                onClick={() => { update({ status: filters.status === s ? '' : s }); close(); }}
-                className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', filters.status === s ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-              >
-                {s}
-              </button>
-            ))}
-          </FilterDropdown>
-
-          <FilterDropdown
-            label={<span className="flex items-center gap-1"><CalendarDays className="w-3 h-3 stroke-[1.5]" /> Season</span>}
-            activeLabel={filters.season ? filters.season.charAt(0).toUpperCase() + filters.season.slice(1) : 'All'}
-            isActive={!!filters.season}
-            isOpen={openDropdown === 'season'}
-            onToggle={() => toggle('season')}
-          >
-            <button
-              onClick={() => { update({ season: '' }); close(); }}
-              className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', !filters.season ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-            >
-              All
-            </button>
-            {SEASONS.map((s) => (
-              <button
-                key={s}
-                onClick={() => { update({ season: filters.season === s.toLowerCase() ? '' : s.toLowerCase() }); close(); }}
-                className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', filters.season === s.toLowerCase() ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-              >
-                {s}
-              </button>
-            ))}
-          </FilterDropdown>
-
-          <FilterDropdown
-            label={<span className="flex items-center gap-1"><Star className="w-3 h-3 text-accent-amber stroke-[1.5]" /> Score</span>}
-            activeLabel={filters.score ? `${filters.score}+` : 'All'}
-            isActive={!!filters.score}
-            isOpen={openDropdown === 'score'}
-            onToggle={() => toggle('score')}
-          >
-            <button
-              onClick={() => { update({ score: '' }); close(); }}
-              className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', !filters.score ? 'text-accent-glow bg-accent-primary/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-            >
-              All
-            </button>
-            {SCORE_FILTERS.map((sf) => (
-              <button
-                key={sf.value}
-                onClick={() => { update({ score: filters.score === String(sf.value) ? '' : String(sf.value) }); close(); }}
-                className={cn('w-full text-left px-3 py-1.5 rounded-input text-xs transition-colors', filters.score === String(sf.value) ? 'text-accent-amber bg-accent-amber/10' : 'text-text-secondary hover:text-text-primary hover:bg-elevated')}
-              >
-                {sf.label}
-              </button>
-            ))}
-          </FilterDropdown>
-
-          <FilterDropdown
-            label={<span className="flex items-center gap-1"><Tag className="w-3 h-3 stroke-[1.5]" /> Genre</span>}
-            activeLabel={filters.genres.length > 0 ? `${filters.genres.length}` : 'All'}
-            isActive={filters.genres.length > 0}
-            isOpen={openDropdown === 'genres'}
-            onToggle={() => toggle('genres')}
-          >
-            <div className="max-h-48 overflow-y-auto">
-              {GENRES.map((genre) => {
-                const id = String(genre.id);
-                return (
-                  <label
-                    key={id}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-input text-xs cursor-pointer transition-colors hover:bg-elevated"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={filters.genres.includes(id)}
-                      onChange={() => toggleGenre(id)}
-                      className="w-3 h-3 rounded-sm border-border-subtle accent-accent-primary"
-                    />
-                    <span className={cn(filters.genres.includes(id) ? 'text-accent-glow' : 'text-text-secondary')}>
-                      {genre.name}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </FilterDropdown>
-
-          {hasActive && (
             <button
               onClick={clearAll}
-              className="flex items-center gap-1 text-xs text-text-muted hover:text-accent-rose transition-colors ml-2 whitespace-nowrap"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-input text-xs font-body font-medium text-text-muted hover:text-accent-rose transition-colors"
             >
-              <RotateCcw className="w-3 h-3 stroke-[1.5]" /> Clear All {activeCount > 0 && `(${activeCount})`}
+              <RotateCcw className="w-3 h-3 stroke-[1.5]" />
+              Clear all
             </button>
-          )}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {totalResults !== undefined && (
+        <p className="text-xs text-text-muted font-body">
+          {totalResults} result{totalResults !== 1 ? 's' : ''}
+          {activeCount > 0 && ` (${activeCount} filter${activeCount !== 1 ? 's' : ''} active)`}
+        </p>
+      )}
     </div>
   );
 }

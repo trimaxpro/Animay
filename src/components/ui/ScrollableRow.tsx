@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/utils/cn';
 
 interface ScrollableRowProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ export function ScrollableRow({ children, className }: ScrollableRowProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [hovered, setHovered] = useState(false);
 
   const updateScrollState = useCallback(() => {
     const el = containerRef.current;
@@ -35,11 +37,18 @@ export function ScrollableRow({ children, className }: ScrollableRowProps) {
   };
 
   return (
-    <div className={`relative group ${className || ''}`}>
+    <div
+      className={cn('relative', className)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {canScrollLeft && (
         <button
           onClick={() => scroll('left')}
-          className="absolute left-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center bg-gradient-to-r from-void/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          className={cn(
+            'absolute left-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center bg-gradient-to-r from-void/90 to-transparent transition-opacity duration-300',
+            hovered ? 'opacity-100' : 'opacity-0',
+          )}
         >
           <div className="w-8 h-8 rounded-full bg-elevated/90 border border-border-subtle flex items-center justify-center hover:bg-accent-primary/20 hover:border-border-glow transition-colors">
             <ChevronLeft className="w-4 h-4 text-text-primary stroke-[1.5]" />
@@ -56,7 +65,10 @@ export function ScrollableRow({ children, className }: ScrollableRowProps) {
       {canScrollRight && (
         <button
           onClick={() => scroll('right')}
-          className="absolute right-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center bg-gradient-to-l from-void/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          className={cn(
+            'absolute right-0 top-0 bottom-0 z-10 w-12 flex items-center justify-center bg-gradient-to-l from-void/90 to-transparent transition-opacity duration-300',
+            hovered ? 'opacity-100' : 'opacity-0',
+          )}
         >
           <div className="w-8 h-8 rounded-full bg-elevated/90 border border-border-subtle flex items-center justify-center hover:bg-accent-primary/20 hover:border-border-glow transition-colors">
             <ChevronRight className="w-4 h-4 text-text-primary stroke-[1.5]" />

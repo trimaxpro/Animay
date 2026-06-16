@@ -25,8 +25,8 @@ export const ANIME_TYPES = ['TV', 'Movie', 'OVA', 'ONA', 'Special'] as const;
 export const ANIME_STATUS = ['Airing', 'Completed', 'Upcoming'] as const;
 export const SEASONS = ['Winter', 'Spring', 'Summer', 'Fall'] as const;
 export const SORT_OPTIONS = [
-  { value: 'popularity', label: 'Popularity' },
   { value: 'score', label: 'Score' },
+  { value: 'favourites', label: 'Favourites' },
   { value: 'start_date', label: 'Start Date' },
   { value: 'title', label: 'Title' },
 ] as const;

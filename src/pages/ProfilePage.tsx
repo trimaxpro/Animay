@@ -138,7 +138,7 @@ export default function ProfilePage() {
                 icon={BookmarkPlus}
                 title="No anime here"
                 message={statusFilter === 'watching' ? 'Your watchlist is empty. Start browsing!' : `No anime in ${STATUS_TABS.find((t) => t.value === statusFilter)?.label}`}
-                actionLabel="Browse Anime"
+                actionLabel="Add Anime"
               />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -166,7 +166,7 @@ export default function ProfilePage() {
 
         {activeTab === 'history' && (
           watchHistory.length === 0 ? (
-            <EmptyState icon={Clock} title="No watch history" message="No watch history yet. Pick something to watch!" actionLabel="Browse" />
+            <EmptyState icon={Clock} title="No watch history" message="No watch history yet. Pick something to watch!" />
           ) : (
             <div className="space-y-2">
               {watchHistory.slice(0, 50).map((entry, i) => (

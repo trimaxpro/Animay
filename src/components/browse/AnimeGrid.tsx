@@ -36,9 +36,9 @@ export function AnimeGrid({ anime, isLoading, viewMode = 'grid' }: AnimeGridProp
                 key={item.mal_id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
+                transition={{ delay: i * 0.005 }}
               >
-                <AnimeCard anime={item} onAddToWatchlist={(_malId) => {
+                <AnimeCard anime={item} onAddToWatchlist={() => {
                   toggleWatchlist({ malId: item.mal_id, title: item.title_english || item.title, image: item.images.jpg?.image_url || '' });
                 }} />
               </motion.div>
@@ -56,9 +56,9 @@ export function AnimeGrid({ anime, isLoading, viewMode = 'grid' }: AnimeGridProp
               key={item.mal_id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.03 }}
+              transition={{ delay: i * 0.005 }}
             >
-              <AnimeCard anime={item} onAddToWatchlist={(_malId) => {
+              <AnimeCard anime={item} onAddToWatchlist={() => {
                 toggleWatchlist({ malId: item.mal_id, title: item.title_english || item.title, image: item.images.jpg?.image_url || '' });
               }} />
             </motion.div>

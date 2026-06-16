@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Plus, ChevronDown, Star, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { HeroSkeleton } from '@/components/ui/Skeleton';
 import { useWatchlist } from '@/hooks/useWatchlist';
+import { useAnimeTheme } from '@/hooks/useAnimeTheme';
 import type { Anime } from '@/types/anime';
 
 interface HeroSectionProps {
@@ -14,26 +15,60 @@ interface HeroSectionProps {
   isLoading: boolean;
 }
 
+function HeroBackground({ anime: featured }: { anime: Anime }) {
+  const { data: themeUrl } = useAnimeTheme(featured?.anilist_id);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const bannerUrl = featured?.banner_image || featured?.images?.jpg?.large_image_url || '';
+
+  useEffect(() => {
+    if (videoRef.current && themeUrl) {
+      videoRef.current.src = themeUrl;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [themeUrl]);
+
+  return (
+    <div className="absolute inset-0">
+      {themeUrl ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover scale-[1.02]"
+        >
+          <source src={themeUrl} type="video/webm" />
+        </video>
+      ) : bannerUrl ? (
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-void"
+          style={{ backgroundImage: `url(${bannerUrl})` }}
+        />
+      ) : null}
+      <div className="absolute inset-0 bg-gradient-to-r from-void via-void/80 to-void/40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/30" />
+    </div>
+  );
+}
+
 export function HeroSection({ anime, isLoading }: HeroSectionProps) {
   const { toggleWatchlist, isInWatchlist } = useWatchlist();
-  
-  // Filter to ensure all featured anime have trailers
-  const animeWithTrailers = anime.filter((item) => item.trailer?.youtube_id);
   const [current, setCurrent] = useState(0);
 
   const nextSlide = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % Math.max(animeWithTrailers.length, 1));
-  }, [animeWithTrailers.length]);
+    setCurrent((prev) => (prev + 1) % Math.max(anime.length, 1));
+  }, [anime.length]);
 
   useEffect(() => {
-    if (animeWithTrailers.length <= 1) return;
+    if (anime.length <= 1) return;
     const timer = setInterval(nextSlide, 8000);
     return () => clearInterval(timer);
-  }, [animeWithTrailers.length, nextSlide]);
+  }, [anime.length, nextSlide]);
 
   if (isLoading) return <HeroSkeleton />;
 
-  const featured = animeWithTrailers[current];
+  const featured = anime[current];
   if (!featured) return null;
 
   return (
@@ -47,16 +82,7 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
           transition={{ duration: 0.6 }}
           className="absolute inset-0"
         >
-          <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-            <iframe
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full scale-[1.35] pointer-events-none"
-              src={`https://www.youtube.com/embed/${featured.trailer!.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer!.youtube_id}&playsinline=1&enablejsapi=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0&start=30`}
-              allow="autoplay; encrypted-media"
-              title="Trailer"
-            />
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-void via-void/80 to-void/40" />
-          <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/30" />
+          <HeroBackground anime={featured} />
         </motion.div>
       </AnimatePresence>
 
@@ -134,7 +160,7 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
       </div>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-        {animeWithTrailers.slice(0, 5).map((_, i) => (
+        {anime.slice(0, 5).map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}

@@ -54,14 +54,15 @@ export interface BrowseParams {
   genres?: string[];
   sort?: string;
   page?: number;
+  perPage?: number;
 }
 
 export interface BrowseResult {
   data: Anime[];
   pagination: {
-    last_visible_page: number;
     has_next_page: boolean;
-    items: { total: number };
+    current_page: number;
+    per_page: number;
   };
 }
 
@@ -74,10 +75,12 @@ export async function getBrowse(params: BrowseParams): Promise<BrowseResult> {
   if (params.score) query.set('score', params.score);
   if (params.genres?.length) query.set('genres', params.genres.join(','));
   if (params.sort) {
-    const sortMap: Record<string, string> = { popularity: 'popularity', score: 'score', start_date: 'start_date', title: 'title' };
+    const sortMap: Record<string, string> = { popularity: 'popularity', score: 'score', start_date: 'start_date', title: 'title', trending: 'trending', favourites: 'favourites' };
     query.set('sort', sortMap[params.sort] || 'popularity');
   }
   query.set('page', String(params.page || 1));
+  query.set('perPage', String(params.perPage || 25));
   const { data } = await apiClient.get<BrowseResult>(`/browse?${query.toString()}`);
   return data;
 }
+

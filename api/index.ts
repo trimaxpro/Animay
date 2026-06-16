@@ -339,6 +339,11 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
     }
 
+    if (apiPath === "/clearcache") {
+      cache.clear();
+      return res.status(200).json({ status: "ok", message: "Cache cleared" });
+    }
+
     if (apiPath === "/anime/trending") {
       let items: any[];
       try {
@@ -592,29 +597,41 @@ export default async function handler(req: any, res: any) {
     }
 
     if (apiPath === "/browse") {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       const bParams = url.searchParams;
       const bPage = parseInt(bParams.get("page") || "1");
-      const bLimit = parseInt(bParams.get("limit") || "25");
+      const bLimit = parseInt(bParams.get("perPage") || "25");
 
       let alSort: string[] = ["POPULARITY_DESC"];
       const sortVal = bParams.get("sort");
       if (sortVal) {
-        const alSortMap: Record<string, string[]> = { popularity: ["POPULARITY_DESC"], score: ["SCORE_DESC"], start_date: ["START_DATE_DESC"], title: ["TITLE_ROMAJI"] };
+        const alSortMap: Record<string, string[]> = {
+          popularity: ["POPULARITY_DESC"],
+          score: ["SCORE_DESC"],
+          start_date: ["START_DATE_DESC"],
+          title: ["TITLE_ROMAJI"],
+          trending: ["TRENDING_DESC"],
+          favourites: ["FAVOURITES_DESC"],
+        };
         alSort = alSortMap[sortVal.toLowerCase()] || ["POPULARITY_DESC"];
       }
 
-      const alFormat = bParams.get("type") ? (bParams.get("type") === "TV" ? "TV" : bParams.get("type") === "Movie" ? "MOVIE" : bParams.get("type") === "OVA" ? "OVA" : bParams.get("type") === "ONA" ? "ONA" : bParams.get("type") === "Special" ? "SPECIAL" : null) : null;
-      const alStatus = bParams.get("status") ? ({ airing: "RELEASING", completed: "FINISHED", upcoming: "NOT_YET_RELEASED" }[bParams.get("status")!.toLowerCase()] || null) : null;
+      const formatMap: Record<string, string> = { TV: "TV", Movie: "MOVIE", OVA: "OVA", ONA: "ONA", Special: "SPECIAL", Music: "MUSIC" };
+      const alFormat = bParams.get("type") ? formatMap[bParams.get("type")!] || null : null;
+
+      const statusMap: Record<string, string> = { airing: "RELEASING", completed: "FINISHED", upcoming: "NOT_YET_RELEASED", cancelled: "CANCELLED", hiatus: "HIATUS" };
+      const alStatus = bParams.get("status") ? statusMap[bParams.get("status")!.toLowerCase()] || null : null;
+
       const alSeason = bParams.get("season") ? bParams.get("season")!.toUpperCase() : null;
       const alYear = bParams.get("year") ? parseInt(bParams.get("year")!) : null;
       const alGenres = bParams.get("genres") ? bParams.get("genres")!.split(",") : null;
       const alScore = bParams.get("score") ? parseInt(bParams.get("score")!) * 10 : null;
 
       const alBrowseQuery = `
-        query ($page: Int, $perPage: Int, $sort: [MediaSort], $format: MediaFormat, $status: MediaStatus, $season: Season, $seasonYear: Int, $genreIn: [String], $scoreGte: Int) {
+        query ($page: Int, $perPage: Int, $sort: [MediaSort], $format: [MediaFormat], $status: MediaStatus, $season: MediaSeason, $seasonYear: Int, $genreIn: [String], $scoreGte: Int) {
           Page(page: $page, perPage: $perPage) {
-            pageInfo { currentPage lastPage hasNextPage perPage total }
-            media(type: ANIME, sort: $sort, format: $format, status: $status, season: $season, seasonYear: $seasonYear, genre_in: $genreIn, averageScore_greater: $scoreGte) {
+            pageInfo { currentPage hasNextPage perPage }
+            media(type: ANIME, sort: $sort, format_in: $format, status: $status, season: $season, seasonYear: $seasonYear, genre_in: $genreIn, averageScore_greater: $scoreGte) {
               id idMal
               title { romaji english native }
               coverImage { large extraLarge }
@@ -640,9 +657,12 @@ export default async function handler(req: any, res: any) {
             query: alBrowseQuery,
             variables: {
               page: bPage, perPage: bLimit, sort: alSort,
-              format: alFormat || undefined, status: alStatus || undefined,
-              season: alSeason || undefined, seasonYear: alYear || undefined,
-              genreIn: alGenres || undefined, scoreGte: alScore || undefined,
+              format: alFormat ? [alFormat] : undefined,
+              status: alStatus || undefined,
+              season: alSeason || undefined,
+              seasonYear: alYear || undefined,
+              genreIn: alGenres || undefined,
+              scoreGte: alScore || undefined,
             },
           }),
         });
@@ -652,10 +672,10 @@ export default async function handler(req: any, res: any) {
           const pageData = alBody?.data?.Page;
           const media = pageData?.media || [];
 
-          const mapALFormat = (f: string): string =>
-            ({ TV: "TV", MOVIE: "Movie", OVA: "OVA", ONA: "ONA", SPECIAL: "Special", MUSIC: "Music" } as Record<string, string>)[f] || f;
-          const mapALStatus = (s: string): string =>
-            ({ RELEASING: "Currently Airing", FINISHED: "Completed", NOT_YET_RELEASED: "Not yet aired", CANCELLED: "Cancelled" } as Record<string, string>)[s] || s;
+          const mapFormat = (f: string): string =>
+            ({ TV: "TV", MOVIE: "Movie", OVA: "OVA", ONA: "ONA", SPECIAL: "Special", TV_SHORT: "TV", MUSIC: "Music" } as Record<string, string>)[f] || f;
+          const mapStatus = (s: string): string =>
+            ({ RELEASING: "Currently Airing", FINISHED: "Completed", NOT_YET_RELEASED: "Not yet aired", CANCELLED: "Cancelled", HIATUS: "Hiatus" } as Record<string, string>)[s] || s;
 
           const items = media.map((m: any) => {
             const rankings = m.rankings || [];
@@ -669,9 +689,9 @@ export default async function handler(req: any, res: any) {
                 jpg: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null },
                 webp: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null },
               },
-              type: m.format ? mapALFormat(m.format) : null,
+              type: m.format ? mapFormat(m.format) : null,
               episodes: m.episodes || null,
-              status: m.status ? mapALStatus(m.status) : null,
+              status: m.status ? mapStatus(m.status) : null,
               score: m.averageScore ? m.averageScore / 10 : null,
               scored_by: null,
               rank: rankEntry?.rank || null,
@@ -696,7 +716,7 @@ export default async function handler(req: any, res: any) {
               trailer: m.trailer?.site === "youtube" ? { youtube_id: m.trailer.id, url: `https://www.youtube.com/watch?v=${m.trailer.id}` } : null,
               relations: (m.relations || []).map((r: any) => ({
                 relation: r.relationType || "",
-                entry: [{ mal_id: r.node?.idMal || r.node?.id, name: r.node?.title?.english || r.node?.title?.romaji || "Unknown", type: r.node?.format ? mapALFormat(r.node.format) : null }],
+                entry: [{ mal_id: r.node?.idMal || r.node?.id, name: r.node?.title?.english || r.node?.title?.romaji || "Unknown", type: r.node?.format ? mapFormat(r.node.format) : null }],
               })),
               anilist_id: m.id,
             };
@@ -705,60 +725,15 @@ export default async function handler(req: any, res: any) {
           return res.status(200).json({
             data: items,
             pagination: {
-              last_visible_page: pageData.pageInfo?.lastPage || 1,
               has_next_page: pageData.pageInfo?.hasNextPage || false,
               current_page: bPage,
-              items: { count: items.length, total: pageData.pageInfo?.total || 0, per_page: bLimit },
+              per_page: bLimit,
             },
           });
         }
       } catch {}
 
-      const bQs = new URLSearchParams();
-      bQs.set("page", String(bPage));
-      bQs.set("limit", String(bLimit));
-
-      const bType = bParams.get("type");
-      if (bType) bQs.set("type", bType === "TV" ? "tv" : bType === "Movie" ? "movie" : bType === "OVA" ? "ova" : bType === "ONA" ? "ona" : bType === "Special" ? "special" : bType.toLowerCase());
-
-      const bStatus = bParams.get("status");
-      if (bStatus) {
-        const sMap2: Record<string, string> = { airing: "airing", completed: "complete", upcoming: "upcoming" };
-        bQs.set("status", sMap2[bStatus.toLowerCase()] || bStatus);
-      }
-
-      const bGenres = bParams.get("genres");
-      if (bGenres) bQs.set("genres", bGenres);
-
-      const bScore = bParams.get("score");
-      if (bScore) bQs.set("min_score", String(parseInt(bScore)));
-
-      if (sortVal) {
-        const sortMap2: Record<string, string> = { popularity: "popularity", score: "score", start_date: "start_date", title: "title" };
-        bQs.set("order_by", sortMap2[sortVal.toLowerCase()] || "popularity");
-        bQs.set("sort", "desc");
-      } else {
-        bQs.set("order_by", "popularity");
-        bQs.set("sort", "desc");
-      }
-
-      const bSeason = bParams.get("season");
-      const bYear = bParams.get("year");
-      if (bSeason && bYear) {
-        bQs.set("season", bSeason.toLowerCase());
-        bQs.set("year", bYear);
-      }
-
-      const jikanData = await jikanFetch<{ data: Record<string, unknown>[]; pagination: Record<string, unknown> }>(`/anime?${bQs.toString()}`);
-      return res.status(200).json({
-        data: jikanData.data.map(normalizeMal),
-        pagination: {
-          last_visible_page: (jikanData.pagination?.last_visible_page as number) || 1,
-          has_next_page: (jikanData.pagination?.has_next_page as boolean) || false,
-          current_page: bPage,
-          items: { count: jikanData.data.length, total: (jikanData.pagination as Record<string, unknown>)?.items ? ((jikanData.pagination as Record<string, unknown>).items as Record<string, unknown>).total as number : 0, per_page: bLimit },
-        },
-      });
+      return res.status(502).json({ error: true, code: "UPSTREAM_ERROR", message: "AniList browse failed", retry: true });
     }
 
     if (apiPath.startsWith("/schedule/")) {
