@@ -29,7 +29,7 @@ export default function HomePage() {
     <PageWrapper>
       <HeroSection anime={trending.data || []} isLoading={trending.isLoading} />
       <ContinueWatching />
-      <TrendingRow title="Trending Now" anime={dedup(trendingNow.data || [], seen)} isLoading={trendingNow.isLoading} showRank />
+      <TrendingRow title="Trending Now" anime={dedup(trendingNow.data || [], seen)} isLoading={trendingNow.isLoading} />
       <SeasonalGrid title="This Season" anime={dedup(seasonal.data || [], seen)} isLoading={seasonal.isLoading} />
       <TrendingRow title="Top Rated" anime={dedup(top.data || [], seen)} isLoading={top.isLoading} showRank />
       <TrendingRow title="Upcoming" anime={dedup(upcoming.data || [], seen)} isLoading={upcoming.isLoading} />
