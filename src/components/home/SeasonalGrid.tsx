@@ -1,5 +1,6 @@
 import { Calendar, Sparkles } from 'lucide-react';
 import { AnimeCard } from '@/components/ui/AnimeCard';
+import { ScrollableRow } from '@/components/ui/ScrollableRow';
 import { AnimeCardSkeleton } from '@/components/ui/Skeleton';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import type { Anime } from '@/types/anime';
@@ -21,12 +22,15 @@ export function SeasonalGrid({ title, anime, isLoading }: SeasonalGridProps) {
   return (
     <section className="py-6 px-4 max-w-7xl mx-auto">
       <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 flex items-center gap-2"><GridIcon className="w-5 h-5 text-accent-glow stroke-[1.5]" /> {title}</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {isLoading
-          ? Array.from({ length: 12 }).map((_, i) => <AnimeCardSkeleton key={i} />)
-          : anime.map((item) => (
+      {isLoading ? (
+        <div className="flex gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <AnimeCardSkeleton key={i} />)}
+        </div>
+      ) : (
+        <ScrollableRow>
+          {anime.map((item) => (
+            <div key={item.mal_id} className="flex-shrink-0 w-[160px] md:w-[180px]">
               <AnimeCard
-                key={item.mal_id}
                 anime={item}
                 onAddToWatchlist={(_malId) => {
                   toggleWatchlist({
@@ -36,8 +40,10 @@ export function SeasonalGrid({ title, anime, isLoading }: SeasonalGridProps) {
                   });
                 }}
               />
-            ))}
-      </div>
+            </div>
+          ))}
+        </ScrollableRow>
+      )}
     </section>
   );
 }

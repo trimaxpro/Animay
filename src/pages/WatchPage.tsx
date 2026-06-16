@@ -4,18 +4,20 @@ import { PageWrapper } from '@/components/layout/PageWrapper';
 import { VideoPlayer } from '@/components/watch/VideoPlayer';
 import { EpisodeList } from '@/components/watch/EpisodeList';
 import { WatchInfo } from '@/components/watch/WatchInfo';
+import { MiniAnimeCard } from '@/components/ui/MiniAnimeCard';
+import { ScrollableRow } from '@/components/ui/ScrollableRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HeroSkeleton, EpisodeSkeleton } from '@/components/ui/Skeleton';
-import { useAnimeDetail, useAnimeEpisodes, useSkipTimes } from '@/hooks/useAnime';
+import { useAnimeDetail, useAnimeEpisodes, useSkipTimes, useRecommendations } from '@/hooks/useAnime';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
-import { AlertCircle, Server, Monitor, Globe } from 'lucide-react';
+import { AlertCircle, Server, Monitor, Globe, ThumbsUp, Sparkles } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 const SERVERS = [
-  { id: 'mal', label: 'MegaPlay', description: 'MAL', icon: Monitor },
-  { id: 'filmu', label: 'FilmU', description: 'AniList', icon: Server },
-  { id: 'embed', label: 'TryEmbed', description: 'AniList', icon: Globe },
-  { id: 'anikoto', label: 'Anikoto', description: 'AniList', icon: Server },
+  { id: 'mal', label: 'MegaPlay', icon: Monitor },
+  { id: 'filmu', label: 'FilmU', icon: Server },
+  { id: 'embed', label: 'TryEmbed', icon: Globe },
+  { id: 'anikoto', label: 'Anikoto', icon: Server },
 ] as const;
 
 export default function WatchPage() {
@@ -27,6 +29,7 @@ export default function WatchPage() {
   const detail = useAnimeDetail(animeId);
   const episodes = useAnimeEpisodes(animeId);
   const skipTimes = useSkipTimes(animeId, episodeNum);
+  const recommendations = useRecommendations(animeId);
   const { addToHistory } = useWatchHistory();
   const navigate = useNavigate();
 
@@ -69,14 +72,16 @@ export default function WatchPage() {
   }
 
   if (detail.isLoading) {
-    return <PageWrapper className="pt-20"><HeroSkeleton /></PageWrapper>;
+    return <PageWrapper className="pt-16"><HeroSkeleton /></PageWrapper>;
   }
 
   return (
-    <PageWrapper className="pt-16 pb-12">
+    <PageWrapper className="pt-20 pb-12">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex flex-col lg:flex-row gap-6">
+          {/* Main content: player + info + description + recommendations */}
           <div className="flex-1 min-w-0">
+            {/* Player */}
             <VideoPlayer
               src=""
               embedUrl={embedUrl}
@@ -89,14 +94,15 @@ export default function WatchPage() {
               }}
             />
 
-            <div className="flex items-center justify-end gap-1.5 mt-3 mb-6">
-              <span className="text-xs text-text-muted font-body mr-1">Server:</span>
+            {/* Server selector */}
+            <div className="flex items-center gap-1.5 mt-3 mb-4">
+              <span className="text-xs text-text-muted mr-1">Server:</span>
               {SERVERS.map((s) => (
                 <button
                   key={s.id}
                   onClick={() => setServer(s.id)}
                   className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-input text-xs font-body transition-all',
+                    'flex items-center gap-1 px-2.5 py-1 rounded-input text-xs transition-all',
                     server === s.id
                       ? 'bg-accent-primary/20 text-accent-glow border border-accent-primary/30'
                       : 'bg-elevated text-text-secondary border border-border-subtle hover:border-border-glow hover:text-text-primary',
@@ -108,52 +114,84 @@ export default function WatchPage() {
               ))}
             </div>
 
+            {/* Episode title, metadata, Add to List, Description */}
             {currentEpisode && anime && (
-              <div className="glass-card rounded-card p-5">
-                <WatchInfo
-                  animeId={animeId}
-                  animeTitle={anime.title_english || anime.title}
-                  episode={currentEpisode}
-                  totalEpisodes={anime.episodes || episodes.data?.length || 0}
-                  currentEpisode={episodeNum}
-                />
-              </div>
+              <WatchInfo
+                animeId={anime.mal_id}
+                animeTitle={anime.title_english || anime.title}
+                animeImage={anime.images.jpg?.image_url || ''}
+                episode={currentEpisode}
+                totalEpisodes={anime.episodes || episodes.data?.length || 0}
+                currentEpisode={episodeNum}
+                description={anime.synopsis}
+              />
             )}
+
           </div>
 
-          <div className="lg:w-[360px] flex-shrink-0">
-            <div className="glass-card rounded-card p-4 sticky top-20">
+          {/* Sidebar: episodes */}
+          <div className="lg:w-[380px] flex-shrink-0">
+            <div className="space-y-6">
+              {/* Anime info card */}
               {anime && (
-                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border-subtle">
+                <div className="glass-card rounded-card p-3 flex items-center gap-3">
                   <img
                     src={anime.images.jpg?.image_url}
                     alt={anime.title}
-                    className="w-14 h-20 rounded-card object-cover"
+                    className="w-12 h-16 rounded-card object-cover flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text-primary font-medium line-clamp-2 leading-snug">{anime.title_english || anime.title}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-text-muted">{episodeNum}/{anime.episodes || episodes.data?.length || '?'}</span>
-                      <span className="text-xs text-text-muted">•</span>
-                      <Link to={`/anime/${animeId}`} className="text-xs text-accent-glow hover:underline">Details</Link>
+                    <p className="font-display font-semibold text-sm text-text-primary line-clamp-2 leading-snug">
+                      {anime.title_english || anime.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
+                      <span className="font-mono">EP {episodeNum}/{anime.episodes || episodes.data?.length || '?'}</span>
+                      <span>•</span>
+                      <Link to={`/anime/${animeId}`} className="text-accent-glow hover:underline">Details</Link>
                     </div>
                   </div>
                 </div>
               )}
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-display font-semibold text-sm text-text-primary">Episodes</h3>
-                {episodes.data && (
-                  <span className="text-xs text-text-muted">{episodes.data.length} total</span>
-                )}
+
+              {/* Episodes */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-display font-semibold text-sm text-text-primary flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-accent-glow stroke-[1.5]" />
+                    Episodes
+                  </h2>
+                  {episodes.data && (
+                    <span className="text-xs text-text-muted font-mono">{episodes.data.length}</span>
+                  )}
+                </div>
+                <div className="glass-card rounded-card p-2">
+                  {episodes.isLoading ? (
+                    <div className="space-y-1">
+                      {Array.from({ length: 6 }).map((_, i) => <EpisodeSkeleton key={i} />)}
+                    </div>
+                  ) : episodes.data ? (
+                    <EpisodeList animeId={animeId} episodes={episodes.data} currentEpisode={episodeNum} />
+                  ) : null}
+                </div>
               </div>
-              {episodes.isLoading ? (
-                <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <EpisodeSkeleton key={i} />)}</div>
-              ) : episodes.data ? (
-                <EpisodeList animeId={animeId} episodes={episodes.data} currentEpisode={episodeNum} />
-              ) : null}
             </div>
           </div>
         </div>
+
+        {/* Recommendations - full width below both columns */}
+        {recommendations.data && recommendations.data.length > 0 && (
+          <div className="mt-8 pt-8 border-t border-border-subtle">
+            <h2 className="font-display font-semibold text-lg text-text-primary mb-4 flex items-center gap-1.5">
+              <ThumbsUp className="w-4 h-4 text-accent-glow stroke-[1.5]" />
+              Recommended
+            </h2>
+            <ScrollableRow>
+              {recommendations.data.map((item) => (
+                <MiniAnimeCard key={item.mal_id} anime={item} />
+              ))}
+            </ScrollableRow>
+          </div>
+        )}
       </div>
     </PageWrapper>
   );

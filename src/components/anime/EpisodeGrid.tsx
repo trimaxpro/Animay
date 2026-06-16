@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, Play, Hash } from 'lucide-react';
+import { Play, Check, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { EpisodeSkeleton } from '@/components/ui/Skeleton';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
@@ -9,15 +9,20 @@ interface EpisodeGridProps {
   animeId: number;
   episodes: Episode[];
   isLoading: boolean;
+  posterImage?: string;
 }
 
-export function EpisodeGrid({ animeId, episodes, isLoading }: EpisodeGridProps) {
+export function EpisodeGrid({ animeId, episodes, isLoading, posterImage }: EpisodeGridProps) {
   const { getProgress } = useWatchHistory();
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        {Array.from({ length: 8 }).map((_, i) => <EpisodeSkeleton key={i} />)}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="flex flex-col gap-2">
+            <EpisodeSkeleton />
+          </div>
+        ))}
       </div>
     );
   }
@@ -25,7 +30,7 @@ export function EpisodeGrid({ animeId, episodes, isLoading }: EpisodeGridProps) 
   if (episodes.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {episodes.map((ep) => {
         const progress = getProgress(animeId, ep.episode);
         const watched = progress > 0.9;
@@ -34,29 +39,54 @@ export function EpisodeGrid({ animeId, episodes, isLoading }: EpisodeGridProps) 
           <Link
             key={ep.mal_id}
             to={`/watch/${animeId}/${ep.episode}`}
-            className={`flex items-center gap-3 p-3 rounded-card border transition-all duration-200 hover:border-border-glow hover:shadow-glow-sm group ${
-              watched ? 'bg-elevated/50 border-border-subtle opacity-70' : 'glass-card border-border-subtle'
-            }`}
+            className="group flex flex-col rounded-card overflow-hidden bg-elevated border border-border-subtle hover:border-border-glow hover:shadow-glow-sm transition-all duration-200"
           >
-            <div className="w-10 h-10 rounded-card bg-elevated flex items-center justify-center flex-shrink-0 group-hover:bg-accent-primary/20 transition-colors">
-              {watched ? (
-                <Check className="w-4 h-4 text-green-400 stroke-[1.5]" />
-              ) : (
-                <div className="flex items-center gap-1">
-                  <Hash className="w-3 h-3 text-text-muted stroke-[1.5]" />
-                  <span className="font-mono font-medium text-sm text-text-muted">{ep.episode}</span>
+            <div className="relative aspect-video overflow-hidden bg-elevated">
+              {posterImage && (
+                <img
+                  src={posterImage}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-void/80 via-void/10 to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-10 h-10 rounded-full bg-accent-primary/90 flex items-center justify-center shadow-glow">
+                  <Play className="w-4 h-4 text-white fill-white stroke-[1.5]" />
+                </div>
+              </div>
+              <div className="absolute top-2 left-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-void/70 backdrop-blur-sm text-text-primary">
+                  EP {ep.episode}
+                </span>
+              </div>
+              {watched && (
+                <div className="absolute top-2 right-2">
+                  <Check className="w-4 h-4 text-green-400 stroke-[1.5]" />
+                </div>
+              )}
+              {progress > 0 && progress <= 0.9 && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-elevated">
+                  <div className="h-full bg-accent-primary rounded-full" style={{ width: `${progress * 100}%` }} />
                 </div>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-text-primary line-clamp-2">{ep.title || `Episode ${ep.episode}`}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                {ep.aired && <span className="text-xs text-text-muted">{new Date(ep.aired).toLocaleDateString()}</span>}
+            <div className="flex flex-col gap-1 p-2.5 flex-1 min-w-0">
+              <p className="text-xs text-text-primary line-clamp-2 leading-snug font-medium">
+                {ep.title || `Episode ${ep.episode}`}
+              </p>
+              <div className="flex items-center gap-2 mt-auto">
+                {ep.aired && (
+                  <span className="text-[10px] text-text-muted flex items-center gap-1">
+                    <Clock className="w-2.5 h-2.5 stroke-[1.5]" />
+                    {new Date(ep.aired).toLocaleDateString()}
+                  </span>
+                )}
                 {ep.filler && <Badge variant="amber">Filler</Badge>}
                 {ep.recap && <Badge variant="default">Recap</Badge>}
               </div>
             </div>
-            <Play className="w-4 h-4 text-text-muted group-hover:text-accent-glow transition-colors flex-shrink-0 stroke-[1.5]" />
           </Link>
         );
       })}

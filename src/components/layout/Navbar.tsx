@@ -52,7 +52,7 @@ export function Navbar() {
               <span className="font-display font-bold text-white text-lg leading-none">A</span>
             </div>
             <span className="font-display font-bold text-xl text-text-primary group-hover:text-accent-glow transition-colors">
-              Ani<span className="text-accent-primary">Verse</span>
+              Animay
             </span>
           </Link>
 
@@ -77,23 +77,23 @@ export function Navbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
             <AnimatePresence>
               {searchOpen && (
                 <motion.form
                   initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 200, opacity: 1 }}
+                  animate={{ width: 240, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
                   onSubmit={handleSearch}
-                  className="overflow-hidden"
+                  className="overflow-hidden absolute right-0 top-1/2 -translate-y-1/2 z-10"
                 >
                   <input
                     autoFocus
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search anime..."
-                    className="w-full bg-elevated border border-border-subtle rounded-input px-3 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary"
+                    className="w-full bg-elevated border border-border-subtle rounded-input pl-3 pr-12 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary"
                   />
                 </motion.form>
               )}
@@ -101,7 +101,7 @@ export function Navbar() {
 
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="w-9 h-9 rounded-card flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all"
+              className="w-9 h-9 rounded-card flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all relative z-20"
               aria-label="Search"
             >
               <Search className="w-4.5 h-4.5 stroke-[1.5]" />
@@ -109,7 +109,7 @@ export function Navbar() {
 
             <Link
               to="/profile"
-              className="hidden md:flex w-9 h-9 rounded-card items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all"
+              className="hidden md:flex w-9 h-9 rounded-card items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all relative z-20"
               aria-label="Watchlist"
             >
               <BookmarkPlus className="w-4.5 h-4.5 stroke-[1.5]" />
@@ -117,7 +117,7 @@ export function Navbar() {
 
             <button
               onClick={() => setMobileOpen(true)}
-              className="md:hidden w-9 h-9 rounded-card flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all"
+              className="md:hidden w-9 h-9 rounded-card flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-elevated transition-all relative z-20"
               aria-label="Menu"
             >
               <Menu className="w-5 h-5 stroke-[1.5]" />

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Play, Clock, Film } from 'lucide-react';
+import { ScrollableRow } from '@/components/ui/ScrollableRow';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
 
 export function ContinueWatching() {
@@ -26,14 +27,14 @@ export function ContinueWatching() {
         <Clock className="w-5 h-5 text-accent-glow stroke-[1.5]" />
         Continue Watching
       </h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <ScrollableRow>
         {entries.map((entry, i) => (
           <motion.div
             key={`${entry.malId}-${entry.episode}`}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05, duration: 0.3 }}
-            className="group relative flex flex-col gap-2"
+            className="flex-shrink-0 w-[160px] md:w-[180px] group relative flex flex-col gap-2"
           >
             <Link
               to={`/watch/${entry.malId}/${entry.episode}`}
@@ -77,7 +78,7 @@ export function ContinueWatching() {
             </div>
           </motion.div>
         ))}
-      </div>
+      </ScrollableRow>
     </section>
   );
 }

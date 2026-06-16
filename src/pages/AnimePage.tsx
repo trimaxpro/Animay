@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { AnimeHero } from '@/components/anime/AnimeHero';
-import { InfoPanel } from '@/components/anime/InfoPanel';
 import { EpisodeGrid } from '@/components/anime/EpisodeGrid';
 import { CharacterList } from '@/components/anime/CharacterList';
 import { RelatedAnime } from '@/components/anime/RelatedAnime';
@@ -47,26 +46,35 @@ export default function AnimePage() {
     <PageWrapper>
       <AnimeHero anime={anime} />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
-        <InfoPanel anime={anime} />
-
+      <div className="max-w-7xl mx-auto px-4 py-10 space-y-12">
         {episodes.data && episodes.data.length > 0 && (
-          <section>
-            <h2 className="font-display font-semibold text-xl text-text-primary mb-4 flex items-center gap-2"><List className="w-5 h-5 text-accent-glow stroke-[1.5]" /> Episodes</h2>
-            <EpisodeGrid animeId={animeId} episodes={episodes.data} isLoading={episodes.isLoading} />
+          <section className="scroll-mt-20">
+            <h2 className="font-display font-semibold text-xl text-text-primary mb-5 flex items-center gap-2">
+              <List className="w-5 h-5 text-accent-glow stroke-[1.5]" />
+              Episodes
+              <span className="text-sm font-mono font-medium text-text-muted ml-1">({episodes.data.length})</span>
+            </h2>
+            <EpisodeGrid animeId={animeId} episodes={episodes.data} isLoading={episodes.isLoading} posterImage={anime.images.jpg?.image_url} />
           </section>
         )}
 
         {anime.characters && anime.characters.length > 0 && (
-          <section>
-            <h2 className="font-display font-semibold text-xl text-text-primary mb-4 flex items-center gap-2"><Users className="w-5 h-5 text-accent-glow stroke-[1.5]" /> Characters & Voice Actors</h2>
+          <section className="scroll-mt-20">
+            <h2 className="font-display font-semibold text-xl text-text-primary mb-5 flex items-center gap-2">
+              <Users className="w-5 h-5 text-accent-glow stroke-[1.5]" />
+              Characters & Voice Actors
+              <span className="text-sm font-mono font-medium text-text-muted ml-1">({anime.characters.length})</span>
+            </h2>
             <CharacterList characters={anime.characters} />
           </section>
         )}
 
         {recommendations.data && recommendations.data.length > 0 && (
-          <section>
-            <h2 className="font-display font-semibold text-xl text-text-primary mb-4 flex items-center gap-2"><ThumbsUp className="w-5 h-5 text-accent-glow stroke-[1.5]" /> You Might Also Like</h2>
+          <section className="scroll-mt-20">
+            <h2 className="font-display font-semibold text-xl text-text-primary mb-5 flex items-center gap-2">
+              <ThumbsUp className="w-5 h-5 text-accent-glow stroke-[1.5]" />
+              You Might Also Like
+            </h2>
             <RelatedAnime anime={recommendations.data} />
           </section>
         )}

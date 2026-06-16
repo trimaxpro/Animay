@@ -1,64 +1,84 @@
-import { ChevronLeft, ChevronRight, Calendar, Film } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, BookmarkPlus, Check, Calendar, Film, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/Button';
+import { useWatchlist } from '@/hooks/useWatchlist';
 import type { Episode } from '@/types/anime';
 
 interface WatchInfoProps {
   animeId: number;
   animeTitle: string;
+  animeImage: string;
   episode: Episode;
   totalEpisodes: number;
   currentEpisode: number;
+  description: string | null;
 }
 
-export function WatchInfo({ animeId, animeTitle, episode, totalEpisodes, currentEpisode }: WatchInfoProps) {
+export function WatchInfo({ animeId, animeTitle, animeImage, episode, totalEpisodes, currentEpisode, description }: WatchInfoProps) {
+  const { toggleWatchlist, isInWatchlist } = useWatchlist();
+  const [descExpanded, setDescExpanded] = useState(false);
   const hasPrev = currentEpisode > 1;
   const hasNext = currentEpisode < totalEpisodes;
+  const inList = isInWatchlist(animeId);
+  const descTruncated = description && description.length > 280;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <Link to={`/anime/${animeId}`} className="text-text-muted text-xs hover:text-accent-glow transition-colors uppercase tracking-wider font-body">
-            {animeTitle}
-          </Link>
-          <h2 className="font-display font-semibold text-xl text-text-primary mt-1 leading-tight">
-            Episode {episode.episode}{episode.title ? <span className="text-text-secondary font-normal"> — {episode.title}</span> : ''}
-          </h2>
-          <div className="flex items-center gap-3 mt-1.5">
-            <span className="text-xs text-text-muted font-mono flex items-center gap-1"><Film className="w-3 h-3 stroke-[1.5]" /> EP {currentEpisode}/{totalEpisodes}</span>
+    <div>
+      {/* Title + metadata + Add to List row */}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-xs text-text-muted mb-1.5">
+            <span className="flex items-center gap-1">
+              <Film className="w-3 h-3 stroke-[1.5]" />
+              EP {currentEpisode}/{totalEpisodes}
+            </span>
             {episode.aired && (
-              <span className="flex items-center gap-1 text-xs text-text-muted">
-                <Calendar className="w-3 h-3 stroke-[1.5]" />
-                {new Date(episode.aired).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
+              <>
+                <span className="text-border-subtle">•</span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 stroke-[1.5]" />
+                  {new Date(episode.aired).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              </>
             )}
           </div>
+          <h1 className="font-display font-bold text-2xl text-text-primary leading-tight">
+            {episode.title || `Episode ${episode.episode}`}
+          </h1>
+          <Link to={`/anime/${animeId}`} className="text-sm text-text-muted hover:text-accent-glow transition-colors mt-0.5 inline-block">
+            {animeTitle}
+          </Link>
         </div>
+        <Button
+          variant={inList ? 'secondary' : 'primary'}
+          size="sm"
+          onClick={() => toggleWatchlist({ malId: animeId, title: animeTitle, image: animeImage })}
+          className="flex-shrink-0"
+        >
+          {inList ? <Check className="w-4 h-4 stroke-[1.5]" /> : <BookmarkPlus className="w-4 h-4 stroke-[1.5]" />}
+          {inList ? 'In List' : 'Add to List'}
+        </Button>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Prev / Next navigation */}
+      <div className="flex items-center gap-3 mb-5">
         {hasPrev ? (
-          <Link
-            to={`/watch/${animeId}/${currentEpisode - 1}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-card bg-elevated border border-border-subtle text-sm text-text-secondary hover:border-border-glow hover:text-text-primary hover:bg-accent-primary/10 transition-all"
+          <Link to={`/watch/${animeId}/${currentEpisode - 1}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-card bg-elevated border border-border-subtle text-sm text-text-secondary hover:border-border-glow hover:text-text-primary transition-all"
           >
             <ChevronLeft className="w-4 h-4 stroke-[1.5]" />
-            Prev
+            Previous
           </Link>
         ) : (
           <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-card bg-elevated/50 text-sm text-text-muted cursor-not-allowed">
             <ChevronLeft className="w-4 h-4 stroke-[1.5]" />
-            Prev
+            Previous
           </span>
         )}
-        <div className="flex-1 h-px bg-border-subtle mx-2" />
-        <span className="text-xs text-text-muted font-mono">
-          {currentEpisode}/{totalEpisodes}
-        </span>
-        <div className="flex-1 h-px bg-border-subtle mx-2" />
+        <div className="flex-1 h-px bg-border-subtle" />
         {hasNext ? (
-          <Link
-            to={`/watch/${animeId}/${currentEpisode + 1}`}
+          <Link to={`/watch/${animeId}/${currentEpisode + 1}`}
             className="flex items-center gap-1.5 px-4 py-1.5 rounded-card bg-accent-primary text-sm text-white hover:bg-accent-glow transition-all"
           >
             Next
@@ -71,6 +91,27 @@ export function WatchInfo({ animeId, animeTitle, episode, totalEpisodes, current
           </span>
         )}
       </div>
+
+      {/* Description */}
+      {description && (
+        <div className="border-t border-border-subtle pt-4">
+          <h2 className="font-display font-semibold text-base text-text-primary mb-2">Description</h2>
+          <div className="relative">
+            <p className={`text-sm text-text-secondary leading-relaxed ${!descExpanded && descTruncated ? 'line-clamp-4' : ''}`}>
+              {description}
+            </p>
+            {descTruncated && (
+              <button
+                onClick={() => setDescExpanded(!descExpanded)}
+                className="flex items-center gap-1 text-sm text-accent-glow hover:underline mt-1"
+              >
+                {descExpanded ? <ChevronUp className="w-3.5 h-3.5 stroke-[1.5]" /> : <ChevronDown className="w-3.5 h-3.5 stroke-[1.5]" />}
+                {descExpanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
