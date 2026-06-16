@@ -53,7 +53,7 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-card overflow-hidden border border-border-subtle shadow-glow-sm flex-shrink-0 bg-void">
-              <img src="/logo.png" alt="MikuAnime Logo" className="w-full h-full object-cover" />
+              <img src="/logo.webp" alt="MikuAnime Logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-display font-bold text-xl text-text-primary group-hover:text-accent-glow transition-colors">
               MikuAnime
