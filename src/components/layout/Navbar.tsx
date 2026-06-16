@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Menu, X, BookmarkPlus, Home, Grid3X3, Calendar } from 'lucide-react';
+import { Search, Menu, X, BookmarkPlus, Home, Globe, Calendar } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useSearch } from '@/hooks/useSearch';
 import type { Anime } from '@/types/anime';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', icon: Home },
-  { to: '/browse', label: 'Browse', icon: Grid3X3 },
+  { to: '/browse', label: 'Browse', icon: Globe },
   { to: '/schedule', label: 'Schedule', icon: Calendar },
 ];
 
