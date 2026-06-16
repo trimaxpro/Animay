@@ -18,9 +18,9 @@ export default {
         'border-glow': 'rgba(124,58,237,0.4)',
       },
       fontFamily: {
-        display: ['Clash Display', 'sans-serif'],
-        body: ['Satoshi', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        display: ['Oswald', 'Inter', 'sans-serif'],
+        body: ['Inter', 'Nunito Sans', 'Lato', 'Roboto', 'sans-serif'],
+        mono: ['Ubuntu Mono', 'JetBrains Mono', 'monospace'],
       },
       borderRadius: {
         input: '4px',

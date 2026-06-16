@@ -44,3 +44,40 @@ export async function getRecommendations(id: number): Promise<Anime[]> {
   const { data } = await apiClient.get<{ data: { entry: Anime }[] }>(`/anime/${id}/recommendations`);
   return data.data?.map((r: { entry: Anime }) => r.entry) || [];
 }
+
+export interface BrowseParams {
+  type?: string;
+  status?: string;
+  season?: string;
+  year?: string;
+  score?: string;
+  genres?: string[];
+  sort?: string;
+  page?: number;
+}
+
+export interface BrowseResult {
+  data: Anime[];
+  pagination: {
+    last_visible_page: number;
+    has_next_page: boolean;
+    items: { total: number };
+  };
+}
+
+export async function getBrowse(params: BrowseParams): Promise<BrowseResult> {
+  const query = new URLSearchParams();
+  if (params.type) query.set('type', params.type);
+  if (params.status) query.set('status', params.status);
+  if (params.season) query.set('season', params.season);
+  if (params.year) query.set('year', params.year);
+  if (params.score) query.set('score', params.score);
+  if (params.genres?.length) query.set('genres', params.genres.join(','));
+  if (params.sort) {
+    const sortMap: Record<string, string> = { popularity: 'popularity', score: 'score', start_date: 'start_date', title: 'title' };
+    query.set('sort', sortMap[params.sort] || 'popularity');
+  }
+  query.set('page', String(params.page || 1));
+  const { data } = await apiClient.get<BrowseResult>(`/browse?${query.toString()}`);
+  return data;
+}

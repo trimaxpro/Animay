@@ -57,20 +57,24 @@ export function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={cn(
-                  'px-3 py-2 rounded-card text-sm font-body font-medium transition-all duration-300',
-                  location.pathname === link.to
-                    ? 'text-accent-glow bg-accent-primary/10'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-elevated',
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-2 rounded-card text-sm font-body font-medium transition-all duration-300',
+                    location.pathname === link.to
+                      ? 'text-accent-glow bg-accent-primary/10'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-elevated',
+                  )}
+                >
+                  <Icon className="w-4 h-4 stroke-[1.5]" />
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-2">

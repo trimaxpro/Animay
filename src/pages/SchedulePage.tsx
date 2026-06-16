@@ -4,7 +4,7 @@ import { PageWrapper } from '@/components/layout/PageWrapper';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { BookmarkPlus } from 'lucide-react';
+import { BookmarkPlus, CalendarDays, Clock, Tv, Radio } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import { apiClient } from '@/api/client';
@@ -32,8 +32,8 @@ export default function SchedulePage() {
       <div className="relative mb-8 px-4">
         <DotPattern opacity={0.3} />
         <div className="relative z-10 max-w-7xl mx-auto">
-          <h1 className="font-display font-bold text-3xl md:text-4xl text-text-primary">Airing Schedule</h1>
-          <p className="text-text-secondary text-sm mt-1">Stay up to date with your favorite shows</p>
+          <h1 className="font-display font-bold text-3xl md:text-4xl text-text-primary flex items-center gap-3"><CalendarDays className="w-8 h-8 text-accent-glow stroke-[1.5]" /> Airing Schedule</h1>
+          <p className="text-text-secondary text-sm mt-1 flex items-center gap-1.5"><Radio className="w-4 h-4 text-accent-glow stroke-[1.5]" /> Stay up to date with your favorite shows</p>
         </div>
       </div>
 
@@ -75,7 +75,8 @@ export default function SchedulePage() {
                       {anime.title_english || anime.title}
                     </Link>
                     <div className="flex items-center gap-2 mt-1">
-                      {anime.broadcast?.time && <span className="text-xs text-text-muted">{anime.broadcast.time} JST</span>}
+                      {anime.broadcast?.time && <span className="text-xs text-text-muted flex items-center gap-1"><Clock className="w-3 h-3 stroke-[1.5]" /> {anime.broadcast.time} JST</span>}
+                      {anime.type && <span className="text-xs text-text-muted flex items-center gap-1"><Tv className="w-3 h-3 stroke-[1.5]" /> {anime.type}</span>}
                       {anime.genres[0] && <Badge variant="violet" className="text-[10px]">{anime.genres[0].name}</Badge>}
                     </div>
                   </div>

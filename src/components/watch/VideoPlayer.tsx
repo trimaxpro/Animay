@@ -115,6 +115,7 @@ export function VideoPlayer({ src, embedUrl, onEnded, skipTimes }: VideoPlayerPr
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
           referrerPolicy="origin"
+          title="Video player"
         />
       </div>
     );

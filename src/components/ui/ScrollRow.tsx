@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, Clock, Star, Sparkles, Film } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 interface ScrollRowProps {
@@ -8,7 +8,12 @@ interface ScrollRowProps {
   className?: string;
 }
 
+const rowIcons: Record<string, typeof TrendingUp> = {
+  'Trending': TrendingUp, 'Popular': Star, 'Upcoming': Clock, 'Top': Sparkles, 'New': Sparkles, 'Seasonal': Film,
+};
+
 export function ScrollRow({ title, children, className }: ScrollRowProps) {
+  const RowIcon = Object.entries(rowIcons).find(([k]) => title.toLowerCase().includes(k.toLowerCase()))?.[1] || Film;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -46,7 +51,7 @@ export function ScrollRow({ title, children, className }: ScrollRowProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <h2 className="font-heading font-bold text-xl md:text-2xl text-text-primary mb-4">{title}</h2>
+      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 flex items-center gap-2"><RowIcon className="w-5 h-5 text-accent-glow stroke-[1.5]" /> {title}</h2>
       <div className="relative group/row">
         <button
           onClick={() => scroll('left')}

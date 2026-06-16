@@ -83,3 +83,14 @@ export function useRecommendations(id: number) {
     retry: 2,
   });
 }
+
+export function useBrowse(params: animeApi.BrowseParams) {
+  return useQuery({
+    queryKey: ['browse', params],
+    queryFn: () => animeApi.getBrowse(params),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
+  });
+}

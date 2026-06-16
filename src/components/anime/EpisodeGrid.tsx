@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, Play } from 'lucide-react';
+import { Check, Play, Hash } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { EpisodeSkeleton } from '@/components/ui/Skeleton';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
@@ -42,7 +42,10 @@ export function EpisodeGrid({ animeId, episodes, isLoading }: EpisodeGridProps) 
               {watched ? (
                 <Check className="w-4 h-4 text-green-400 stroke-[1.5]" />
               ) : (
-                <span className="font-mono font-medium text-sm text-text-muted">{ep.episode}</span>
+                <div className="flex items-center gap-1">
+                  <Hash className="w-3 h-3 text-text-muted stroke-[1.5]" />
+                  <span className="font-mono font-medium text-sm text-text-muted">{ep.episode}</span>
+                </div>
               )}
             </div>
             <div className="flex-1 min-w-0">

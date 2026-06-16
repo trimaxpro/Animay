@@ -1,3 +1,4 @@
+import { Mic, User } from 'lucide-react';
 import type { Character } from '@/types/anime';
 
 interface CharacterListProps {
@@ -21,9 +22,9 @@ export function CharacterList({ characters }: CharacterListProps) {
             />
           </div>
           <p className="text-xs text-text-primary line-clamp-2 font-medium">{char.name}</p>
-          <p className="text-xs text-text-muted mt-0.5">{char.role}</p>
+          <p className="text-xs text-text-muted mt-0.5 flex items-center justify-center gap-1"><User className="w-3 h-3 stroke-[1.5]" /> {char.role}</p>
           {char.voice_actors?.[0] && (
-            <p className="text-xs text-accent-glow mt-0.5 line-clamp-1">{char.voice_actors[0].person.name}</p>
+            <p className="text-xs text-accent-glow mt-0.5 line-clamp-1 flex items-center justify-center gap-1"><Mic className="w-3 h-3 stroke-[1.5]" /> {char.voice_actors[0].person.name}</p>
           )}
         </div>
       ))}

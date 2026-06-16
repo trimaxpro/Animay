@@ -21,7 +21,7 @@ function setCache(key: string, data: unknown, ttlMs: number) {
   }
 }
 
-async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; banner_image?: string; description?: string; al_trailer?: { youtube_id: string | null } } | null> {
+async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; banner_image?: string; description?: string; al_trailer?: { youtube_id: string | null; url: string | null } } | null> {
   const query = `
     query ($idMal: Int) {
       Media (idMal: $idMal, type: ANIME) {
@@ -60,7 +60,7 @@ async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; b
       anilist_id: media.id || undefined,
       banner_image: media.bannerImage || undefined,
       description: cleanDescription,
-      al_trailer: media.trailer?.site === "youtube" ? { youtube_id: media.trailer.id } : undefined,
+      al_trailer: media.trailer?.site === "youtube" ? { youtube_id: media.trailer.id, url: `https://www.youtube.com/watch?v=${media.trailer.id}` } : undefined,
     };
   } catch (e) {
     return null;
@@ -592,53 +592,171 @@ export default async function handler(req: any, res: any) {
     }
 
     if (apiPath === "/browse") {
-      const params = url.searchParams;
-      const page = parseInt(params.get("page") || "1");
-      const limit = parseInt(params.get("limit") || "25");
-      const qs = new URLSearchParams();
-      qs.set("page", String(page));
-      qs.set("limit", String(limit));
+      const bParams = url.searchParams;
+      const bPage = parseInt(bParams.get("page") || "1");
+      const bLimit = parseInt(bParams.get("limit") || "25");
 
-      const type = params.get("type");
-      if (type) qs.set("type", type === "TV" ? "tv" : type === "Movie" ? "movie" : type === "OVA" ? "ova" : type === "ONA" ? "ona" : type === "Special" ? "special" : type.toLowerCase());
-
-      const status = params.get("status");
-      if (status) {
-        const sMap: Record<string, string> = { airing: "airing", completed: "complete", upcoming: "upcoming" };
-        qs.set("status", sMap[status.toLowerCase()] || status);
+      let alSort: string[] = ["POPULARITY_DESC"];
+      const sortVal = bParams.get("sort");
+      if (sortVal) {
+        const alSortMap: Record<string, string[]> = { popularity: ["POPULARITY_DESC"], score: ["SCORE_DESC"], start_date: ["START_DATE_DESC"], title: ["TITLE_ROMAJI"] };
+        alSort = alSortMap[sortVal.toLowerCase()] || ["POPULARITY_DESC"];
       }
 
-      const genres = params.get("genres");
-      if (genres) qs.set("genres", genres);
+      const alFormat = bParams.get("type") ? (bParams.get("type") === "TV" ? "TV" : bParams.get("type") === "Movie" ? "MOVIE" : bParams.get("type") === "OVA" ? "OVA" : bParams.get("type") === "ONA" ? "ONA" : bParams.get("type") === "Special" ? "SPECIAL" : null) : null;
+      const alStatus = bParams.get("status") ? ({ airing: "RELEASING", completed: "FINISHED", upcoming: "NOT_YET_RELEASED" }[bParams.get("status")!.toLowerCase()] || null) : null;
+      const alSeason = bParams.get("season") ? bParams.get("season")!.toUpperCase() : null;
+      const alYear = bParams.get("year") ? parseInt(bParams.get("year")!) : null;
+      const alGenres = bParams.get("genres") ? bParams.get("genres")!.split(",") : null;
+      const alScore = bParams.get("score") ? parseInt(bParams.get("score")!) * 10 : null;
 
-      const score = params.get("score");
-      if (score) qs.set("min_score", String(parseInt(score)));
+      const alBrowseQuery = `
+        query ($page: Int, $perPage: Int, $sort: [MediaSort], $format: MediaFormat, $status: MediaStatus, $season: Season, $seasonYear: Int, $genreIn: [String], $scoreGte: Int) {
+          Page(page: $page, perPage: $perPage) {
+            pageInfo { currentPage lastPage hasNextPage perPage total }
+            media(type: ANIME, sort: $sort, format: $format, status: $status, season: $season, seasonYear: $seasonYear, genre_in: $genreIn, averageScore_greater: $scoreGte) {
+              id idMal
+              title { romaji english native }
+              coverImage { large extraLarge }
+              bannerImage
+              format episodes status averageScore popularity favourites description
+              season seasonYear
+              startDate { year month day } endDate { year month day }
+              source duration genres
+              studios(isMain: true) { nodes { id name } }
+              trailer { id site }
+              rankings { rank type }
+              nextAiringEpisode { airingAt episode }
+              relations { relationType node { id idMal title { romaji english } format } }
+            }
+          }
+        }`;
 
-      const sort = params.get("sort");
-      if (sort) {
-        const sortMap: Record<string, string> = { popularity: "popularity", score: "score", start_date: "start_date", title: "title" };
-        qs.set("order_by", sortMap[sort.toLowerCase()] || "popularity");
-        qs.set("sort", "desc");
+      try {
+        const alRes = await fetch("https://graphql.anilist.co", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            query: alBrowseQuery,
+            variables: {
+              page: bPage, perPage: bLimit, sort: alSort,
+              format: alFormat || undefined, status: alStatus || undefined,
+              season: alSeason || undefined, seasonYear: alYear || undefined,
+              genreIn: alGenres || undefined, scoreGte: alScore || undefined,
+            },
+          }),
+        });
+
+        if (alRes.ok) {
+          const alBody = await alRes.json() as any;
+          const pageData = alBody?.data?.Page;
+          const media = pageData?.media || [];
+
+          const mapALFormat = (f: string): string =>
+            ({ TV: "TV", MOVIE: "Movie", OVA: "OVA", ONA: "ONA", SPECIAL: "Special", MUSIC: "Music" } as Record<string, string>)[f] || f;
+          const mapALStatus = (s: string): string =>
+            ({ RELEASING: "Currently Airing", FINISHED: "Completed", NOT_YET_RELEASED: "Not yet aired", CANCELLED: "Cancelled" } as Record<string, string>)[s] || s;
+
+          const items = media.map((m: any) => {
+            const rankings = m.rankings || [];
+            const rankEntry = rankings.find((r: any) => r.type === "RATED") || rankings[0];
+            return {
+              mal_id: m.idMal || m.id,
+              title: m.title?.english || m.title?.romaji || "Unknown",
+              title_english: m.title?.english || null,
+              title_japanese: m.title?.native || null,
+              images: {
+                jpg: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null },
+                webp: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null },
+              },
+              type: m.format ? mapALFormat(m.format) : null,
+              episodes: m.episodes || null,
+              status: m.status ? mapALStatus(m.status) : null,
+              score: m.averageScore ? m.averageScore / 10 : null,
+              scored_by: null,
+              rank: rankEntry?.rank || null,
+              popularity: m.popularity || null,
+              members: null,
+              favorites: m.favourites || null,
+              synopsis: m.description ? m.description.replace(/<[^>]*>/g, "") : null,
+              season: m.season ? m.season.charAt(0) + m.season.slice(1).toLowerCase() : null,
+              year: m.seasonYear || null,
+              aired: {
+                from: m.startDate?.year ? `${m.startDate.year}-${String(m.startDate.month || 1).padStart(2, "0")}-${String(m.startDate.day || 1).padStart(2, "0")}` : null,
+                to: m.endDate?.year ? `${m.endDate.year}-${String(m.endDate.month || 1).padStart(2, "0")}-${String(m.endDate.day || 1).padStart(2, "0")}` : null,
+                string: m.startDate?.year ? `${m.season || ""} ${m.seasonYear || ""}`.trim() || `${m.startDate.year}` : "?",
+              },
+              broadcast: null,
+              studios: (m.studios?.nodes || []).map((s: any) => ({ mal_id: s.id, name: s.name })),
+              genres: (m.genres || []).map((g: string) => ({ mal_id: -1, name: g })),
+              themes: [],
+              source: m.source || null,
+              rating: null,
+              duration: m.duration ? `${m.duration} min per ep` : null,
+              trailer: m.trailer?.site === "youtube" ? { youtube_id: m.trailer.id, url: `https://www.youtube.com/watch?v=${m.trailer.id}` } : null,
+              relations: (m.relations || []).map((r: any) => ({
+                relation: r.relationType || "",
+                entry: [{ mal_id: r.node?.idMal || r.node?.id, name: r.node?.title?.english || r.node?.title?.romaji || "Unknown", type: r.node?.format ? mapALFormat(r.node.format) : null }],
+              })),
+              anilist_id: m.id,
+            };
+          });
+
+          return res.status(200).json({
+            data: items,
+            pagination: {
+              last_visible_page: pageData.pageInfo?.lastPage || 1,
+              has_next_page: pageData.pageInfo?.hasNextPage || false,
+              current_page: bPage,
+              items: { count: items.length, total: pageData.pageInfo?.total || 0, per_page: bLimit },
+            },
+          });
+        }
+      } catch {}
+
+      const bQs = new URLSearchParams();
+      bQs.set("page", String(bPage));
+      bQs.set("limit", String(bLimit));
+
+      const bType = bParams.get("type");
+      if (bType) bQs.set("type", bType === "TV" ? "tv" : bType === "Movie" ? "movie" : bType === "OVA" ? "ova" : bType === "ONA" ? "ona" : bType === "Special" ? "special" : bType.toLowerCase());
+
+      const bStatus = bParams.get("status");
+      if (bStatus) {
+        const sMap2: Record<string, string> = { airing: "airing", completed: "complete", upcoming: "upcoming" };
+        bQs.set("status", sMap2[bStatus.toLowerCase()] || bStatus);
+      }
+
+      const bGenres = bParams.get("genres");
+      if (bGenres) bQs.set("genres", bGenres);
+
+      const bScore = bParams.get("score");
+      if (bScore) bQs.set("min_score", String(parseInt(bScore)));
+
+      if (sortVal) {
+        const sortMap2: Record<string, string> = { popularity: "popularity", score: "score", start_date: "start_date", title: "title" };
+        bQs.set("order_by", sortMap2[sortVal.toLowerCase()] || "popularity");
+        bQs.set("sort", "desc");
       } else {
-        qs.set("order_by", "popularity");
-        qs.set("sort", "desc");
+        bQs.set("order_by", "popularity");
+        bQs.set("sort", "desc");
       }
 
-      const season = params.get("season");
-      const year = params.get("year");
-      if (season && year) {
-        qs.set("season", season.toLowerCase());
-        qs.set("year", year);
+      const bSeason = bParams.get("season");
+      const bYear = bParams.get("year");
+      if (bSeason && bYear) {
+        bQs.set("season", bSeason.toLowerCase());
+        bQs.set("year", bYear);
       }
 
-      const data = await jikanFetch<{ data: Record<string, unknown>[]; pagination: Record<string, unknown> }>(`/anime?${qs.toString()}`);
+      const jikanData = await jikanFetch<{ data: Record<string, unknown>[]; pagination: Record<string, unknown> }>(`/anime?${bQs.toString()}`);
       return res.status(200).json({
-        data: data.data.map(normalizeMal),
+        data: jikanData.data.map(normalizeMal),
         pagination: {
-          last_visible_page: (data.pagination?.last_visible_page as number) || 1,
-          has_next_page: (data.pagination?.has_next_page as boolean) || false,
-          current_page: page,
-          items: { count: data.data.length, total: (data.pagination as Record<string, unknown>)?.items ? ((data.pagination as Record<string, unknown>).items as Record<string, unknown>).total as number : 0, per_page: limit },
+          last_visible_page: (jikanData.pagination?.last_visible_page as number) || 1,
+          has_next_page: (jikanData.pagination?.has_next_page as boolean) || false,
+          current_page: bPage,
+          items: { count: jikanData.data.length, total: (jikanData.pagination as Record<string, unknown>)?.items ? ((jikanData.pagination as Record<string, unknown>).items as Record<string, unknown>).total as number : 0, per_page: bLimit },
         },
       });
     }

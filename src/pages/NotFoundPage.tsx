@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { Button } from '@/components/ui/Button';
-import { Home, Grid3X3 } from 'lucide-react';
+import { Home, Grid3X3, Search } from 'lucide-react';
 
 export default function NotFoundPage() {
   return (
@@ -32,6 +32,12 @@ export default function NotFoundPage() {
               <Button variant="secondary" size="md">
                 <Grid3X3 className="w-4 h-4" />
                 Browse Anime
+              </Button>
+            </Link>
+            <Link to="/search">
+              <Button variant="ghost" size="md">
+                <Search className="w-4 h-4" />
+                Search
               </Button>
             </Link>
           </div>

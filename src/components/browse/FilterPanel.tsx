@@ -1,5 +1,5 @@
 import { cn } from '@/utils/cn';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { ANIME_TYPES, ANIME_STATUS, SEASONS, SCORE_FILTERS, GENRES } from '@/utils/constants';
 import * as Accordion from '@radix-ui/react-accordion';
 
@@ -53,9 +53,9 @@ export function FilterPanel({ filters, onChange, className }: FilterPanelProps) 
   return (
     <div className={cn('w-full', className)}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display font-semibold text-text-primary">Filters</h3>
-        <button onClick={clearAll} className="text-xs text-text-muted hover:text-accent-rose transition-colors">
-          Clear All
+        <h3 className="font-display font-semibold text-text-primary flex items-center gap-1.5"><SlidersHorizontal className="w-4 h-4 text-accent-glow stroke-[1.5]" /> Filters</h3>
+        <button onClick={clearAll} className="flex items-center gap-1 text-xs text-text-muted hover:text-accent-rose transition-colors">
+          <RotateCcw className="w-3 h-3 stroke-[1.5]" /> Clear All
         </button>
       </div>
 

@@ -6,18 +6,18 @@ import { AnimeCard } from '@/components/ui/AnimeCard';
 import { useUserStore } from '@/stores/userStore';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
-import { BookmarkPlus, Clock, Edit3, BarChart3 } from 'lucide-react';
+import { BookmarkPlus, Clock, Edit3, BarChart3, Star, List, Play, CheckCircle, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import type { WatchlistStatus } from '@/types/user';
 
 const AVATAR_COLORS = ['#7C3AED', '#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#EC4899'];
-const STATUS_TABS: { value: WatchlistStatus; label: string }[] = [
-  { value: 'watching', label: 'Watching' },
-  { value: 'plan_to_watch', label: 'Plan to Watch' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'dropped', label: 'Dropped' },
-  { value: 'on_hold', label: 'On Hold' },
+const STATUS_TABS: { value: WatchlistStatus; label: string; icon: typeof Play }[] = [
+  { value: 'watching', label: 'Watching', icon: Eye },
+  { value: 'plan_to_watch', label: 'Plan to Watch', icon: Star },
+  { value: 'completed', label: 'Completed', icon: CheckCircle },
+  { value: 'dropped', label: 'Dropped', icon: List },
+  { value: 'on_hold', label: 'On Hold', icon: Clock },
 ];
 
 export default function ProfilePage() {
@@ -114,20 +114,24 @@ export default function ProfilePage() {
         {activeTab === 'watchlist' && (
           <div>
             <div className="flex items-center gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-              {STATUS_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setStatusFilter(tab.value)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-card text-xs font-body font-medium transition-all flex-shrink-0',
-                    statusFilter === tab.value
-                      ? 'bg-accent-primary/20 text-accent-glow border border-accent-primary/30'
-                      : 'bg-elevated text-text-secondary border border-border-subtle',
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {STATUS_TABS.map((tab) => {
+                const TabIcon = tab.icon;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setStatusFilter(tab.value)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-card text-xs font-body font-medium transition-all flex-shrink-0 inline-flex items-center gap-1.5',
+                      statusFilter === tab.value
+                        ? 'bg-accent-primary/20 text-accent-glow border border-accent-primary/30'
+                        : 'bg-elevated text-text-secondary border border-border-subtle',
+                    )}
+                  >
+                    <TabIcon className="w-3.5 h-3.5 stroke-[1.5]" />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
             {filteredWatchlist.length === 0 ? (
               <EmptyState
@@ -188,14 +192,17 @@ export default function ProfilePage() {
         {activeTab === 'stats' && (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="glass-card rounded-card p-6 text-center">
+              <Play className="w-5 h-5 text-accent-glow mx-auto mb-2 stroke-[1.5]" />
               <p className="font-mono font-bold text-3xl text-accent-glow">{totalEpisodes}</p>
               <p className="text-text-muted text-sm mt-1">Episodes Watched</p>
             </div>
             <div className="glass-card rounded-card p-6 text-center">
+              <Clock className="w-5 h-5 text-accent-amber mx-auto mb-2 stroke-[1.5]" />
               <p className="font-mono font-bold text-3xl text-accent-amber">{totalHours}</p>
               <p className="text-text-muted text-sm mt-1">Hours Watched</p>
             </div>
             <div className="glass-card rounded-card p-6 text-center">
+              <BookmarkPlus className="w-5 h-5 text-accent-rose mx-auto mb-2 stroke-[1.5]" />
               <p className="font-mono font-bold text-3xl text-accent-rose">{watchlist.length}</p>
               <p className="text-text-muted text-sm mt-1">Anime in List</p>
             </div>

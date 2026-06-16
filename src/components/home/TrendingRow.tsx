@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Flame, TrendingUp, Star } from 'lucide-react';
 import { AnimeCard } from '@/components/ui/AnimeCard';
 import { AnimeCardSkeleton } from '@/components/ui/Skeleton';
 import { useWatchlist } from '@/hooks/useWatchlist';
@@ -11,12 +12,17 @@ interface TrendingRowProps {
   showRank?: boolean;
 }
 
+const titleIcons: Record<string, typeof Flame> = {
+  'Trending': Flame, 'Popular': TrendingUp, 'Upcoming': Star,
+};
+
 export function TrendingRow({ title, anime, isLoading, showRank = false }: TrendingRowProps) {
   const { toggleWatchlist } = useWatchlist();
+  const TitleIcon = Object.entries(titleIcons).find(([k]) => title.includes(k))?.[1] || TrendingUp;
 
   return (
     <section className="py-6 px-4 max-w-7xl mx-auto">
-      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4">{title}</h2>
+      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 flex items-center gap-2"><TitleIcon className="w-5 h-5 text-accent-glow stroke-[1.5]" /> {title}</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => <AnimeCardSkeleton key={i} />)

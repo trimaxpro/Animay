@@ -1,4 +1,4 @@
-import { Grid3X3, List, SlidersHorizontal } from 'lucide-react';
+import { Grid3X3, List, SlidersHorizontal, Eye } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { SORT_OPTIONS } from '@/utils/constants';
 
@@ -23,7 +23,7 @@ export function SortBar({ resultCount, sort, onSortChange, viewMode, onViewModeC
             <SlidersHorizontal className="w-4 h-4 stroke-[1.5]" />
           </button>
         )}
-        <span className="text-sm text-text-muted font-body">Showing <span className="text-text-primary font-medium">{resultCount}</span> anime</span>
+        <span className="text-sm text-text-muted font-body flex items-center gap-1.5"><Eye className="w-3.5 h-3.5 stroke-[1.5]" /> Showing <span className="text-text-primary font-medium">{resultCount}</span> anime</span>
       </div>
 
       <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Film } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Episode } from '@/types/anime';
 
@@ -25,7 +25,7 @@ export function WatchInfo({ animeId, animeTitle, episode, totalEpisodes, current
             Episode {episode.episode}{episode.title ? <span className="text-text-secondary font-normal"> — {episode.title}</span> : ''}
           </h2>
           <div className="flex items-center gap-3 mt-1.5">
-            <span className="text-xs text-text-muted font-mono">EP {currentEpisode}/{totalEpisodes}</span>
+            <span className="text-xs text-text-muted font-mono flex items-center gap-1"><Film className="w-3 h-3 stroke-[1.5]" /> EP {currentEpisode}/{totalEpisodes}</span>
             {episode.aired && (
               <span className="flex items-center gap-1 text-xs text-text-muted">
                 <Calendar className="w-3 h-3 stroke-[1.5]" />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, ChevronDown, Star } from 'lucide-react';
+import { Play, Plus, ChevronDown, Star, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { Badge } from '@/components/ui/Badge';
@@ -49,8 +49,8 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
         >
           <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
             <iframe
-              className="absolute inset-0 w-full h-full scale-[1.35]"
-              src={`https://www.youtube.com/embed/${featured.trailer.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer.youtube_id}&playsinline=1&enablejsapi=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0&start=30`}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full scale-[1.35] pointer-events-none"
+              src={`https://www.youtube.com/embed/${featured.trailer!.youtube_id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${featured.trailer!.youtube_id}&playsinline=1&enablejsapi=1&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&disablekb=1&fs=0&start=30`}
               allow="autoplay; encrypted-media"
               title="Trailer"
             />
@@ -107,6 +107,12 @@ export function HeroSection({ anime, isLoading }: HeroSectionProps) {
                   <Button variant="primary" size="lg">
                     <Play className="w-5 h-5 fill-white" />
                     Watch Now
+                  </Button>
+                </Link>
+                <Link to={`/anime/${featured.mal_id}`}>
+                  <Button variant="secondary" size="lg">
+                    <Info className="w-5 h-5 stroke-[1.5]" />
+                    Details
                   </Button>
                 </Link>
                 <Button

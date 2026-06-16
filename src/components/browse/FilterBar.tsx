@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/utils/cn';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Tv, Heart, CalendarDays, Star, Tag, RotateCcw } from 'lucide-react';
 import { ANIME_TYPES, ANIME_STATUS, SEASONS, SCORE_FILTERS, GENRES } from '@/utils/constants';
 import type { FilterState } from './FilterPanel';
 
@@ -10,7 +10,7 @@ interface FilterBarProps {
 }
 
 interface DropdownProps {
-  label: string;
+  label: React.ReactNode;
   activeLabel: string;
   isActive: boolean;
   isOpen: boolean;
@@ -30,7 +30,7 @@ function FilterDropdown({ label, activeLabel, isActive, isOpen, onToggle, childr
             : 'bg-elevated text-text-secondary border border-border-subtle hover:border-border-glow hover:text-text-primary',
         )}
       >
-        <span>{label}: <span className="font-medium">{activeLabel}</span></span>
+        <span>{label}:&nbsp;<span className="font-medium">{activeLabel}</span></span>
         <ChevronDown className={cn('w-3 h-3 stroke-[1.5] transition-transform', isOpen && 'rotate-180')} />
       </button>
       {isOpen && (
@@ -83,7 +83,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
       <div className="glass-card rounded-card p-3">
         <div className="flex items-center gap-2 flex-wrap">
           <FilterDropdown
-            label="Type"
+            label={<span className="flex items-center gap-1"><Tv className="w-3 h-3 stroke-[1.5]" /> Type</span>}
             activeLabel={filters.type || 'All'}
             isActive={!!filters.type}
             isOpen={openDropdown === 'type'}
@@ -107,7 +107,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           </FilterDropdown>
 
           <FilterDropdown
-            label="Status"
+            label={<span className="flex items-center gap-1"><Heart className="w-3 h-3 stroke-[1.5]" /> Status</span>}
             activeLabel={filters.status || 'All'}
             isActive={!!filters.status}
             isOpen={openDropdown === 'status'}
@@ -131,7 +131,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           </FilterDropdown>
 
           <FilterDropdown
-            label="Season"
+            label={<span className="flex items-center gap-1"><CalendarDays className="w-3 h-3 stroke-[1.5]" /> Season</span>}
             activeLabel={filters.season ? filters.season.charAt(0).toUpperCase() + filters.season.slice(1) : 'All'}
             isActive={!!filters.season}
             isOpen={openDropdown === 'season'}
@@ -155,7 +155,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           </FilterDropdown>
 
           <FilterDropdown
-            label="Score"
+            label={<span className="flex items-center gap-1"><Star className="w-3 h-3 text-accent-amber stroke-[1.5]" /> Score</span>}
             activeLabel={filters.score ? `${filters.score}+` : 'All'}
             isActive={!!filters.score}
             isOpen={openDropdown === 'score'}
@@ -179,7 +179,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           </FilterDropdown>
 
           <FilterDropdown
-            label="Genre"
+            label={<span className="flex items-center gap-1"><Tag className="w-3 h-3 stroke-[1.5]" /> Genre</span>}
             activeLabel={filters.genres.length > 0 ? `${filters.genres.length}` : 'All'}
             isActive={filters.genres.length > 0}
             isOpen={openDropdown === 'genres'}
@@ -211,9 +211,9 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
           {hasActive && (
             <button
               onClick={clearAll}
-              className="text-xs text-text-muted hover:text-accent-rose transition-colors ml-2 whitespace-nowrap"
+              className="flex items-center gap-1 text-xs text-text-muted hover:text-accent-rose transition-colors ml-2 whitespace-nowrap"
             >
-              Clear All {activeCount > 0 && `(${activeCount})`}
+              <RotateCcw className="w-3 h-3 stroke-[1.5]" /> Clear All {activeCount > 0 && `(${activeCount})`}
             </button>
           )}
         </div>

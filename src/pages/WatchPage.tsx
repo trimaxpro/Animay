@@ -49,7 +49,7 @@ export default function WatchPage() {
         title: anime.title_english || anime.title,
         image: anime.images.jpg?.image_url || '',
         episode: episodeNum,
-        progress: 0,
+        progress: 0.01,
       });
     }
   }, [anime?.mal_id, episodeNum]);

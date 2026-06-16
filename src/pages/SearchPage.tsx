@@ -3,7 +3,7 @@ import { PageWrapper } from '@/components/layout/PageWrapper';
 import { SearchBar } from '@/components/search/SearchBar';
 import { AnimeGrid } from '@/components/browse/AnimeGrid';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { SearchX } from 'lucide-react';
+import { SearchX, Search } from 'lucide-react';
 import { useSearch } from '@/hooks/useSearch';
 
 export default function SearchPage() {
@@ -18,8 +18,8 @@ export default function SearchPage() {
 
         <div className="mt-8">
           {query && (
-            <h1 className="font-display font-bold text-2xl text-text-primary mb-6">
-              Searching for: <span className="text-accent-glow">{query}</span>
+            <h1 className="font-display font-bold text-2xl text-text-primary mb-6 flex items-center gap-2">
+              <Search className="w-6 h-6 text-accent-glow stroke-[1.5]" /> Results for: <span className="text-accent-glow">{query}</span>
             </h1>
           )}
 

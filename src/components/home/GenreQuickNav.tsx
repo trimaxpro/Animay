@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { GENRES } from '@/utils/constants';
 
 export function GenreQuickNav() {
   return (
     <section className="py-8 px-4 max-w-7xl mx-auto">
-      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4">Browse by Genre</h2>
+      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 flex items-center gap-2"><Sparkles className="w-5 h-5 text-accent-glow stroke-[1.5]" /> Browse by Genre</h2>
       <div className="flex flex-wrap gap-2">
         {GENRES.map((genre) => (
           <Link
