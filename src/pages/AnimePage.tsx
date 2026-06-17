@@ -1,12 +1,15 @@
 import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { AnimeHero } from '@/components/anime/AnimeHero';
 import { EpisodeGrid } from '@/components/anime/EpisodeGrid';
 import { CharacterList } from '@/components/anime/CharacterList';
 import { RelatedAnime } from '@/components/anime/RelatedAnime';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useAnimeDetail, useAnimeEpisodes, useRecommendations } from '@/hooks/useAnime';
-import { AlertCircle, List, Users, ThumbsUp } from 'lucide-react';
+import { useAnimeDetail, useAnimeEpisodes } from '@/hooks/useAnime';
+import { apiClient } from '@/api/client';
+import { AlertCircle, List, Users, ListVideo } from 'lucide-react';
+import type { Anime } from '@/types/anime';
 
 export default function AnimePage() {
   const { id } = useParams<{ id: string }>();
@@ -14,7 +17,16 @@ export default function AnimePage() {
 
   const detail = useAnimeDetail(animeId);
   const episodes = useAnimeEpisodes(animeId, 120000);
-  const recommendations = useRecommendations(animeId);
+  const genreIds = detail.data?.genres?.map((g) => g.mal_id).join(',') || '';
+  const similar = useQuery({
+    queryKey: ['similar', animeId, genreIds],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ data: Anime[] }>(`/browse?genres=${genreIds}&sort=score&perPage=15`);
+      return (data.data || []).filter((a) => a.mal_id !== animeId).slice(0, 12);
+    },
+    enabled: !!genreIds,
+    staleTime: 10 * 60 * 1000,
+  });
 
   if (detail.isError) {
     return (
@@ -42,7 +54,19 @@ export default function AnimePage() {
   }
 
   const anime = detail.data;
-  if (!anime) return null;
+  if (!anime) {
+    return (
+      <PageWrapper className="pt-24 pb-12 px-4">
+        <EmptyState
+          icon={AlertCircle}
+          title="Anime not found"
+          message="This anime could not be found. It may have been removed or the link is incorrect."
+          actionLabel="Browse Anime"
+          onAction={() => window.location.href = '/browse'}
+        />
+      </PageWrapper>
+    );
+  }
 
   const isAiring = anime.status === 'Currently Airing' || anime.status === 'Airing';
   const visibleEpisodes = isAiring
@@ -78,13 +102,15 @@ export default function AnimePage() {
           </section>
         )}
 
-        {recommendations.data && recommendations.data.length > 0 && (
+        {similar.data && similar.data.length > 0 && (
           <section className="scroll-mt-20">
-            <h2 className="font-display font-semibold text-xl text-text-primary mb-5 flex items-center gap-2">
-              <ThumbsUp className="w-5 h-5 text-accent-glow stroke-[1.5]" />
-              You Might Also Like
-            </h2>
-            <RelatedAnime anime={recommendations.data} />
+            <div className="flex items-center gap-2 mb-5">
+              <ListVideo className="w-5 h-5 text-accent-glow stroke-[1.5]" />
+              <h2 className="font-display font-semibold text-xl text-text-primary">More Like This</h2>
+            </div>
+            <div className="pl-7">
+              <RelatedAnime anime={similar.data} />
+            </div>
           </section>
         )}
       </div>

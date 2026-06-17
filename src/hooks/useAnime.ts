@@ -62,6 +62,7 @@ export function useAnimeEpisodes(id: number, refetchInterval?: number) {
     enabled: !!id,
     retry: 3,
     refetchInterval,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -82,8 +83,8 @@ export function useBrowse(params: Omit<animeApi.BrowseParams, 'page' | 'perPage'
     initialPageParam: 1,
     getNextPageParam: (lastPage) => lastPage.pagination.has_next_page ? lastPage.pagination.current_page + 1 : undefined,
     placeholderData: keepPreviousData,
-    staleTime: 0,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
     gcTime: 10 * 60 * 1000,
     retry: 3,
     retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 4000),

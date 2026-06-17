@@ -9,10 +9,11 @@ import { MiniAnimeCard } from '@/components/ui/MiniAnimeCard';
 import { ScrollableRow } from '@/components/ui/ScrollableRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EpisodeSkeleton } from '@/components/ui/Skeleton';
-import { useAnimeDetail, useAnimeEpisodes, useSkipTimes, useRecommendations } from '@/hooks/useAnime';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
+import { useAnimeDetail, useAnimeEpisodes, useSkipTimes } from '@/hooks/useAnime';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
 import { apiClient } from '@/api/client';
-import { AlertCircle, Server, Monitor, Globe, ThumbsUp, Sparkles, Play, ListVideo } from 'lucide-react';
+import { AlertCircle, Server, Monitor, Globe, Sparkles, Play, ListVideo, ChevronDown, Radio } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { Anime } from '@/types/anime';
 
@@ -30,11 +31,11 @@ export default function WatchPage() {
   const animeId = Number(id);
   const episodeNum = Number(episodeParam) || 1;
   const [server, setServer] = useState<string>('mal');
+  const [serverOpen, setServerOpen] = useState(false);
 
   const detail = useAnimeDetail(animeId);
   const episodes = useAnimeEpisodes(animeId);
   const skipTimes = useSkipTimes(animeId, episodeNum);
-  const recommendations = useRecommendations(animeId);
   const { addToHistory } = useWatchHistory();
   const navigate = useNavigate();
 
@@ -87,7 +88,7 @@ export default function WatchPage() {
   const maxAvailableEpisode = visibleEpisodes.reduce((max, ep) => Math.max(max, ep.episode), 0);
   useEffect(() => {
     if (!isAiring) return;
-    const interval = setInterval(() => episodes.refetch(), 120000);
+    const interval = setInterval(() => { episodes.refetch(); }, 120000);
     return () => clearInterval(interval);
   }, [isAiring]);
 
@@ -122,37 +123,62 @@ export default function WatchPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Main content: player + info + description + recommendations */}
           <div className="flex-1 min-w-0">
-            {/* Player */}
-            <VideoPlayer
-              src=""
-              embedUrl={embedUrl}
-              skipTimes={skipTimes.data}
-              onEnded={() => {
-                const nextEp = episodeNum + 1;
-                if (nextEp <= maxAvailableEpisode) {
-                  navigate(`/watch/${animeId}/${nextEp}`);
-                }
-              }}
-            />
+            {/* Player with floating server dropdown */}
+            <div className="relative">
+              <VideoPlayer
+                src=""
+                embedUrl={embedUrl}
+                skipTimes={skipTimes.data}
+                onEnded={() => {
+                  const nextEp = episodeNum + 1;
+                  if (nextEp <= maxAvailableEpisode) {
+                    navigate(`/watch/${animeId}/${nextEp}`);
+                  }
+                }}
+              />
 
-            {/* Server selector */}
-            <div className="flex items-center gap-1.5 mt-3 mb-4">
-              <span className="text-xs text-text-muted mr-1">Server:</span>
-              {SERVERS.filter((s) => s.id !== 'videasy' || anime?.anilist_id).map((s) => (
+              <div className="absolute top-3 right-3 z-20">
                 <button
-                  key={s.id}
-                  onClick={() => setServer(s.id)}
-                  className={cn(
-                    'flex items-center gap-1 px-2.5 py-1 rounded-input text-xs transition-all',
-                    server === s.id
-                      ? 'bg-accent-primary/20 text-accent-glow border border-accent-primary/30'
-                      : 'bg-elevated text-text-secondary border border-border-subtle hover:border-border-glow hover:text-text-primary',
-                  )}
+                  onClick={() => setServerOpen(!serverOpen)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-card bg-void/80 backdrop-blur-sm border border-border-subtle text-xs text-text-secondary hover:text-text-primary hover:border-border-glow transition-all"
                 >
-                  <s.icon className="w-3 h-3 stroke-[1.5]" />
-                  {s.label}
+                  {(() => {
+                    const active = SERVERS.find((s) => s.id === server);
+                    if (!active) return null;
+                    const Icon = active.icon;
+                    return <Icon className="w-3.5 h-3.5 stroke-[1.5]" />;
+                  })()}
+                  {SERVERS.find((s) => s.id === server)?.label || 'Server'}
+                  <ChevronDown className="w-3 h-3 stroke-[1.5] ml-1 transition-transform" style={{ transform: serverOpen ? 'rotate(180deg)' : 'none' }} />
                 </button>
-              ))}
+
+                {serverOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setServerOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1.5 w-40 rounded-card bg-elevated border border-border-subtle shadow-xl z-20 overflow-hidden">
+                      {SERVERS.filter((s) => s.id !== 'videasy' || anime?.anilist_id).map((s) => {
+                        const Icon = s.icon;
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => { setServer(s.id); setServerOpen(false); }}
+                            className={cn(
+                              'w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors',
+                              server === s.id
+                                ? 'bg-accent-primary/15 text-accent-glow'
+                                : 'text-text-secondary hover:bg-surface hover:text-text-primary',
+                            )}
+                          >
+                            <Icon className="w-3.5 h-3.5 stroke-[1.5]" />
+                            {s.label}
+                            {server === s.id && <span className="ml-auto text-[10px] text-accent-glow">Active</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Episode title, metadata, Add to List, Description */}
@@ -223,24 +249,27 @@ export default function WatchPage() {
                   ) : null}
                 </div>
               </div>
+
+              {/* Next episode countdown for airing anime */}
+              {isAiring && episodes.data && (() => {
+                const nextEp = episodes.data.find((ep) => ep.aired === null && ep.airing_at);
+                if (!nextEp || !nextEp.airing_at) return null;
+                const airDate = new Date(nextEp.airing_at * 1000).toISOString();
+                return (
+                  <div className="glass-card rounded-card p-3 flex items-center gap-3 border border-border-subtle">
+                    <div className="w-8 h-8 rounded-full bg-accent-primary/15 flex items-center justify-center flex-shrink-0">
+                      <Radio className="w-4 h-4 text-accent-glow stroke-[1.5]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-text-secondary">Next: Ep {nextEp.episode} airs in</p>
+                      <CountdownTimer targetDate={airDate} className="text-sm" />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
-
-        {/* Recommendations - full width below both columns */}
-        {recommendations.data && recommendations.data.length > 0 && (
-          <div className="mt-8 pt-8 border-t border-border-subtle">
-            <h2 className="font-display font-semibold text-lg text-text-primary mb-4 flex items-center gap-1.5">
-              <ThumbsUp className="w-4 h-4 text-accent-glow stroke-[1.5]" />
-              Recommended
-            </h2>
-            <ScrollableRow>
-              {recommendations.data.map((item) => (
-                <MiniAnimeCard key={item.mal_id} anime={item} />
-              ))}
-            </ScrollableRow>
-          </div>
-        )}
 
         {/* Similar Anime - genre-based suggestions */}
         {similar.data && similar.data.length > 0 && (

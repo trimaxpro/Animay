@@ -1,5 +1,4 @@
 import { useState, memo } from 'react';
-import { motion } from 'framer-motion';
 import { Play, Plus, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
@@ -18,12 +17,8 @@ function AnimeCardInner({ anime, onAddToWatchlist, className }: AnimeCardProps) 
   const scoreColor = anime.score && anime.score >= 8 ? 'amber' : anime.score && anime.score >= 6 ? 'default' : 'rose';
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.03 }}
-      transition={{ duration: 0.2 }}
-      className={cn('group relative flex flex-col gap-2', className)}
-    >
-      <Link to={`/anime/${anime.mal_id}`} className="block relative aspect-[3/4] rounded-card overflow-hidden bg-elevated">
+    <div className={cn('group relative flex flex-col gap-2 transition-transform duration-200 hover:-translate-y-0.5', className)}>
+      <Link to={`/anime/${anime.mal_id}`} className="block relative aspect-[3/4] rounded-card overflow-hidden bg-elevated ring-0 transition-all duration-200 group-hover:ring-1 group-hover:ring-accent-primary/30 group-hover:shadow-glow-sm">
         {!imgError ? (
           <img
             src={imageUrl}
@@ -38,10 +33,10 @@ function AnimeCardInner({ anime, onAddToWatchlist, className }: AnimeCardProps) 
           </div>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-void/90 via-void/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-void/90 via-void/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="w-12 h-12 rounded-full bg-accent-primary/90 flex items-center justify-center shadow-glow">
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="w-12 h-12 rounded-full bg-accent-primary/90 flex items-center justify-center shadow-glow scale-90 group-hover:scale-100 transition-transform duration-200">
             <Play className="w-5 h-5 text-white fill-white stroke-[1.5]" />
           </div>
         </div>
@@ -51,7 +46,7 @@ function AnimeCardInner({ anime, onAddToWatchlist, className }: AnimeCardProps) 
           {anime.status === 'Currently Airing' && <Badge>Airing</Badge>}
         </div>
 
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => { e.preventDefault(); onAddToWatchlist?.(anime.mal_id); }}
             className="w-8 h-8 rounded-full glass-card flex items-center justify-center hover:bg-accent-primary/30 transition-colors"
@@ -61,14 +56,14 @@ function AnimeCardInner({ anime, onAddToWatchlist, className }: AnimeCardProps) 
           </button>
         </div>
 
-        <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 text-xs text-text-secondary">
+        <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 text-xs text-text-secondary">
           {anime.episodes && <span>{anime.episodes} eps</span>}
         </div>
       </Link>
 
       <div className="flex flex-col gap-1">
-        <h3 className="font-display font-semibold text-sm text-text-primary line-clamp-2 leading-tight">
-          <Link to={`/anime/${anime.mal_id}`} className="hover:text-accent-glow transition-colors">
+        <h3 className="font-display font-semibold text-sm text-text-primary line-clamp-2 leading-tight group-hover:text-accent-glow transition-colors duration-200">
+          <Link to={`/anime/${anime.mal_id}`}>
             {anime.title_english || anime.title}
           </Link>
         </h3>
@@ -90,7 +85,7 @@ function AnimeCardInner({ anime, onAddToWatchlist, className }: AnimeCardProps) 
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

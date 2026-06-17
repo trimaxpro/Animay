@@ -417,6 +417,13 @@ function getSeason() {
   return { current: seasons[idx], year: y, next: seasons[(idx + 1) % 4], nextYear: (idx + 1) % 4 === 0 ? y + 1 : y };
 }
 
+function simulatedDelay() {
+  const ms = 4000 + Math.random() * 1000;
+  return new Promise(r => setTimeout(r, ms));
+}
+
+const requestTimestamps = new Map<string, number>();
+
 export default async function handler(req: any, res: any) {
   setCors(res);
 
@@ -438,9 +445,16 @@ export default async function handler(req: any, res: any) {
   const malClientId = process.env.MAL_CLIENT_ID || "";
 
   try {
+    if (apiPath === "/clearcache") {
+      cache.clear();
+      return res.status(200).json({ status: "cleared" });
+    }
+
     if (apiPath === "/health") {
       return res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
     }
+
+    await simulatedDelay();
 
     if (apiPath === "/avatar/waifu" || apiPath === "/random-avatar") {
       try {
@@ -617,14 +631,12 @@ export default async function handler(req: any, res: any) {
             }
           }
         `;
-        const alRes = await fetch("https://graphql.anilist.co", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({ query: alQuery, variables: { idMal: malId } }),
-        });
+        const alFetch = makeAniListFetch(alQuery, { idMal: malId });
+        const alRes = await alFetch();
 
         if (alRes.ok) {
           const alBody = await alRes.json() as any;
+          if (alBody.errors) throw new Error(`AniList error: ${alBody.errors[0]?.message}`);
           const media = alBody?.data?.Media;
           if (media) {
             const schedule = media.airingSchedule?.nodes || [];
@@ -635,6 +647,7 @@ export default async function handler(req: any, res: any) {
               title: `Episode ${s.episode}`,
               episode: s.episode,
               aired: s.airingAt <= now ? new Date(s.airingAt * 1000).toISOString() : null,
+              airing_at: s.airingAt,
               filler: false,
               recap: false,
               forum_url: null,
@@ -643,14 +656,14 @@ export default async function handler(req: any, res: any) {
             totalEpisodes = (media.episodes as number) || null;
           }
         }
-      } catch {}
+      } catch (e) { console.error(`[episodes] AniList failed for ${id}:`, e); }
 
       // 2. Always try MAL for totalEpisodes (most reliable count)
       if (!totalEpisodes) {
         try {
           const detailData = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=num_episodes`, malClientId);
           totalEpisodes = detailData.num_episodes as number | null;
-        } catch {}
+        } catch (e) { console.error(`[episodes] MAL totalEpisodes failed for ${id}:`, e); }
       }
 
       // 3. If AniList returned nothing, try Kitsu (10k req/day, no auth)
@@ -671,7 +684,7 @@ export default async function handler(req: any, res: any) {
               forum_url: null,
             }));
           }
-        } catch {}
+        } catch (e) { console.error(`[episodes] Kitsu failed for ${id}:`, e); }
       }
 
       // 4. If still no episodes, try Jikan
@@ -682,7 +695,7 @@ export default async function handler(req: any, res: any) {
             ...ep,
             episode: ep.mal_id ?? ep.episode,
           }));
-        } catch {}
+        } catch (e) { console.error(`[episodes] Jikan episodes failed for ${id}:`, e); }
       }
 
       // 5. Try Jikan for totalEpisodes if still unknown
@@ -690,7 +703,7 @@ export default async function handler(req: any, res: any) {
         try {
           const jikanDetail = await jikanFetch<{ data: Record<string, unknown> }>(`/anime/${id}`);
           totalEpisodes = jikanDetail.data?.episodes as number | null;
-        } catch {}
+        } catch (e) { console.error(`[episodes] Jikan detail failed for ${id}:`, e); }
       }
 
       // 6. Derive total from max episode as last resort
@@ -796,10 +809,14 @@ export default async function handler(req: any, res: any) {
     }
 
     if (apiPath === "/browse") {
-      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Cache-Control", "public, max-age=120, s-maxage=300");
       const bParams = url.searchParams;
       const bPage = parseInt(bParams.get("page") || "1");
       const bLimit = parseInt(bParams.get("perPage") || "25");
+
+      const browseCacheKey = `browse:${url.search}`;
+      const cachedBrowse = getCached(browseCacheKey);
+      if (cachedBrowse) return res.status(200).json(cachedBrowse);
 
       let alSort: string[] = ["POPULARITY_DESC"];
       const sortVal = bParams.get("sort");
@@ -878,7 +895,9 @@ export default async function handler(req: any, res: any) {
 
         if (alRes.ok) {
           const alBody = await alRes.json() as any;
+          if (alBody.errors) throw new Error(`AniList error: ${alBody.errors[0]?.message}`);
           const pageData = alBody?.data?.Page;
+          if (!pageData) throw new Error("AniList returned no data");
           const media = pageData?.media || [];
 
           const mapFormat = (f: string): string =>
@@ -931,16 +950,18 @@ export default async function handler(req: any, res: any) {
             };
           });
 
-          return res.status(200).json({
+          const browseResult = {
             data: items,
             pagination: {
               has_next_page: pageData.pageInfo?.hasNextPage || false,
               current_page: bPage,
               per_page: bLimit,
             },
-          });
+          };
+          setCache(browseCacheKey, browseResult, 300000);
+          return res.status(200).json(browseResult);
         }
-      } catch {}
+      } catch (e) { console.error("[browse] AniList query failed:", e); }
 
       // Fallback to Jikan if AniList fails
       try {
@@ -1029,15 +1050,17 @@ export default async function handler(req: any, res: any) {
           relations: [],
         }));
 
-        return res.status(200).json({
+        const browseResult = {
           data: items,
           pagination: {
             has_next_page: jikanData.pagination?.has_next_page || false,
             current_page: bPage,
             per_page: bLimit,
           },
-        });
-      } catch {}
+        };
+        setCache(browseCacheKey, browseResult, 300000);
+        return res.status(200).json(browseResult);
+      } catch (e) { console.error("[browse] Jikan fallback failed:", e); }
 
       return res.status(502).json({ error: true, code: "UPSTREAM_ERROR", message: "Browse failed", retry: true });
     }
@@ -1130,6 +1153,7 @@ export default async function handler(req: any, res: any) {
               synopsis: a.description ? a.description.replace(/<[^>]*>/g, "").slice(0, 500) : null,
               season: a.season?.season || null,
               year: a.season?.year ? parseInt(a.season.year) : null,
+              next_airing: a.jpnTime || null,
               aired: { from: a.premier || null, to: null, string: a.premier ? new Date(a.premier).toLocaleDateString() : "?" },
               broadcast: { day: airDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(), time: airDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' }) },
               studios: (a.studios || []).map((s: any) => ({ mal_id: -1, name: s.name })),

@@ -22,6 +22,7 @@ export interface Anime {
   synopsis: string | null;
   season: string | null;
   year: number | null;
+  next_airing?: string | null;
   aired: {
     from: string | null;
     to: string | null;
@@ -67,6 +68,7 @@ export interface Episode {
   title: string;
   episode: number;
   aired: string | null;
+  airing_at?: number | null;
   filler: boolean;
   recap: boolean;
   forum_url: string | null;

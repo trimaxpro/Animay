@@ -6,9 +6,7 @@ interface SkeletonProps {
 
 export function Skeleton({ className }: SkeletonProps) {
   return (
-    <div className={cn('flex items-center justify-center bg-surface/50 rounded-card', className)}>
-      <img src="/loader.gif" alt="Loading..." className="w-16 h-16 object-contain opacity-80" />
-    </div>
+    <div className={cn('animate-pulse bg-surface/50 rounded-card', className)} />
   );
 }
 

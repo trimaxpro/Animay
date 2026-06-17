@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { BookmarkPlus, CalendarDays, Clock, Tv, Radio } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/utils/cn';
@@ -84,9 +85,10 @@ export default function SchedulePage() {
                       <Link to={`/anime/${anime.mal_id}`} className="text-sm font-medium text-text-primary hover:text-accent-glow transition-colors line-clamp-1">
                         {anime.title_english || anime.title}
                       </Link>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {anime.airing_episode && <span className="text-xs text-accent-glow font-medium flex items-center gap-1"><Radio className="w-3 h-3 stroke-[1.5]" /> Ep {anime.airing_episode}{anime.episodes ? `/${anime.episodes}` : ''}</span>}
-                        {anime.broadcast?.time && <span className="text-xs text-text-muted flex items-center gap-1"><Clock className="w-3 h-3 stroke-[1.5]" /> {anime.broadcast.time} JST</span>}
+                        {anime.next_airing && <span className="text-xs text-text-muted flex items-center gap-1"><Clock className="w-3 h-3 stroke-[1.5]" /> {new Date(anime.next_airing).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} {anime.broadcast?.time || ''}</span>}
+                        {anime.next_airing && <CountdownTimer targetDate={anime.next_airing} />}
                         {anime.type && <span className="text-xs text-text-muted flex items-center gap-1"><Tv className="w-3 h-3 stroke-[1.5]" /> {anime.type}</span>}
                         {anime.genres[0] && <Badge variant="violet" className="text-[10px]">{anime.genres[0].name}</Badge>}
                       </div>

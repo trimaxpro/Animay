@@ -1,4 +1,4 @@
-import { Star, Play, Share2, BookmarkPlus, Eye, CheckCircle, List, Clock, Trash2, ChevronDown } from 'lucide-react';
+import { Star, Play, BookmarkPlus, Eye, CheckCircle, List, Clock, Trash2, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -189,20 +189,7 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
                   </>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                size="md"
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: anime.title_english || anime.title, url: window.location.href });
-                  } else {
-                    navigator.clipboard.writeText(window.location.href);
-                  }
-                }}
-              >
-                <Share2 className="w-4 h-4" />
-                Share
-              </Button>
+
             </div>
           </div>
         </div>

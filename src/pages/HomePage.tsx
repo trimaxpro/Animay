@@ -18,7 +18,7 @@ export default function HomePage() {
   const isekai = useBrowse({ genres: ['62'], sort: 'trending' });
   const ecchi = useBrowse({ genres: ['9'], sort: 'trending' });
 
-  const loading = trending.isLoading || trendingNow.isLoading || seasonal.isLoading || top.isLoading || upcoming.isLoading;
+  const initialLoading = trending.isLoading && trendingNow.isLoading && seasonal.isLoading && top.isLoading && upcoming.isLoading;
 
   function dedup(arr: Anime[], seen: Set<number>) {
     return arr.filter((a) => { if (seen.has(a.mal_id)) return false; seen.add(a.mal_id); return true; });
@@ -26,7 +26,7 @@ export default function HomePage() {
 
   const seen = new Set<number>();
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <PageWrapper>
         <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4">
@@ -39,15 +39,15 @@ export default function HomePage() {
 
   return (
     <PageWrapper>
-      <HeroSection anime={trending.data || []} isLoading={false} />
+      <HeroSection anime={trending.data || []} isLoading={trending.isLoading} />
       <ContinueWatching />
-      <TrendingRow title="Trending Now" anime={dedup(trendingNow.data || [], seen)} isLoading={false} />
-      <SeasonalGrid title="This Season" anime={dedup(seasonal.data || [], seen)} isLoading={false} />
-      <TrendingRow title="Top Rated" anime={dedup(top.data || [], seen)} isLoading={false} showRank />
-      <TrendingRow title="Upcoming" anime={dedup(upcoming.data || [], seen)} isLoading={false} />
-      <TrendingRow title="Anime Movies" anime={dedup(movies.data?.pages.flatMap((p) => p.data) || [], seen)} isLoading={false} fetchNext={movies.hasNextPage ? () => movies.fetchNextPage() : undefined} />
-      <TrendingRow title="Isekai Anime" anime={dedup(isekai.data?.pages.flatMap((p) => p.data) || [], seen)} isLoading={false} fetchNext={isekai.hasNextPage ? () => isekai.fetchNextPage() : undefined} />
-      <TrendingRow title="Ecchi Anime" anime={dedup(ecchi.data?.pages.flatMap((p) => p.data) || [], seen)} isLoading={false} fetchNext={ecchi.hasNextPage ? () => ecchi.fetchNextPage() : undefined} />
+      <TrendingRow title="Trending Now" anime={dedup(trendingNow.data || [], seen)} isLoading={trendingNow.isLoading} />
+      <SeasonalGrid title="This Season" anime={dedup(seasonal.data || [], seen)} isLoading={seasonal.isLoading} />
+      <TrendingRow title="Top Rated" anime={dedup(top.data || [], seen)} isLoading={top.isLoading} showRank />
+      <TrendingRow title="Upcoming" anime={dedup(upcoming.data || [], seen)} isLoading={upcoming.isLoading} />
+      <TrendingRow title="Anime Movies" anime={dedup(movies.data?.pages.flatMap((p) => p.data) || [], seen)} isLoading={movies.isLoading} fetchNext={movies.hasNextPage ? () => movies.fetchNextPage() : undefined} />
+      <TrendingRow title="Isekai Anime" anime={dedup(isekai.data?.pages.flatMap((p) => p.data) || [], seen)} isLoading={isekai.isLoading} fetchNext={isekai.hasNextPage ? () => isekai.fetchNextPage() : undefined} />
+      <TrendingRow title="Ecchi Anime" anime={dedup(ecchi.data?.pages.flatMap((p) => p.data) || [], seen)} isLoading={ecchi.isLoading} fetchNext={ecchi.hasNextPage ? () => ecchi.fetchNextPage() : undefined} />
       <GenreQuickNav />
     </PageWrapper>
   );

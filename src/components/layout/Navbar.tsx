@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, Home, Globe, Calendar, LogIn, BookmarkPlus } from 'lucide-react';
@@ -17,8 +17,10 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { data: searchResults } = useSearch(searchQuery, 1);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
+  const { data: searchResults } = useSearch(debouncedQuery, 1);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,6 +34,12 @@ export function Navbar() {
     setMobileOpen(false);
     setSearchOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedQuery(searchQuery), 400);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [searchQuery]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
