@@ -516,25 +516,176 @@ export default async function handler(req: any, res: any) {
 
     if (apiPath === "/anime/seasonal") {
       const { current, year } = getSeason();
+      const cacheKey = `seasonal:${year}:${current}`;
+      const cached = getCached(cacheKey);
+      if (cached) return res.status(200).json(cached);
+
       try {
         const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${year}/${current}?limit=100&fields=${LIST_FIELDS}`, malClientId);
         const items = extractNodes(data);
-        return res.status(200).json({ data: items.map(normalizeMal) });
+        const result = { data: items.map(normalizeMal) };
+        setCache(cacheKey, result, 600000);
+        return res.status(200).json(result);
       } catch (err) {
-        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${year}/${current}?limit=25`);
-        return res.status(200).json({ data: data.data.map(normalizeMal) });
+        try {
+          const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${year}/${current}?limit=25`);
+          const result = { data: data.data.map(normalizeMal) };
+          setCache(cacheKey, result, 600000);
+          return res.status(200).json(result);
+        } catch (err2) {
+          try {
+            const seasonUpper = current.toUpperCase();
+            const alQuery = `query ($season: MediaSeason, $year: Int) { Page(page: 1, perPage: 25) { media(season: $season, seasonYear: $year, type: ANIME, sort: POPULARITY_DESC, isAdult: false) { id idMal title { romaji english native } coverImage { large extraLarge } bannerImage format episodes status averageScore popularity description season seasonYear startDate { year month day } genres studios(isMain: true) { nodes { id name } } trailer { id site } rankings { rank type } } } }`;
+            const alFetch = makeAniListFetch(alQuery, { season: seasonUpper, year });
+            const alRes = await alFetch();
+            if (alRes.ok) {
+              const alBody = await alRes.json() as any;
+              if (!alBody.errors && alBody?.data?.Page?.media) {
+                const items = alBody.data.Page.media.map((m: any) => ({
+                  mal_id: m.idMal || m.id,
+                  title: m.title?.english || m.title?.romaji || "Unknown",
+                  title_english: m.title?.english || null,
+                  title_japanese: m.title?.native || null,
+                  images: { jpg: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null }, webp: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null } },
+                  type: m.format ? ({ TV: "TV", MOVIE: "Movie", OVA: "OVA", ONA: "ONA", SPECIAL: "Special", TV_SHORT: "TV", MUSIC: "Music" } as Record<string, string>)[m.format] || m.format : null,
+                  episodes: m.episodes || null,
+                  status: m.status ? ({ RELEASING: "Currently Airing", FINISHED: "Completed", NOT_YET_RELEASED: "Not yet aired", CANCELLED: "Cancelled", HIATUS: "Hiatus" } as Record<string, string>)[m.status] || m.status : null,
+                  score: m.averageScore ? m.averageScore / 10 : null,
+                  scored_by: null, rank: null, popularity: m.popularity || null, members: null, favorites: null,
+                  synopsis: m.description ? m.description.replace(/<[^>]*>/g, "") : null,
+                  season: m.season ? m.season.charAt(0) + m.season.slice(1).toLowerCase() : null,
+                  year: m.seasonYear || null,
+                  aired: { from: null, to: null, string: "?" },
+                  broadcast: null,
+                  studios: (m.studios?.nodes || []).map((s: any) => ({ mal_id: s.id, name: s.name })),
+                  genres: (m.genres || []).map((g: string) => ({ mal_id: -1, name: g })),
+                  themes: [], source: null, rating: null, duration: null,
+                  trailer: m.trailer?.site === "youtube" ? { youtube_id: m.trailer.id, url: `https://www.youtube.com/watch?v=${m.trailer.id}` } : null,
+                  relations: [],
+                }));
+                const result = { data: items };
+                setCache(cacheKey, result, 600000);
+                return res.status(200).json(result);
+              }
+            }
+          } catch (e) { console.error(`[seasonal] AniList failed:`, e); }
+
+          try {
+            const kitsuData = await kitsuFetch<{ data: any[] }>(`/anime?filter[seasonYear]=${year}&filter[season]=${current}&page[limit]=25&sort=-userCount`);
+            const now = new Date();
+            const items = (kitsuData.data || []).map((m: any) => ({
+              mal_id: parseInt(m.id) || 0,
+              title: m.attributes?.titles?.en_jp || m.attributes?.canonicalTitle || "Unknown",
+              title_english: m.attributes?.titles?.en || null,
+              title_japanese: m.attributes?.titles?.ja_jp || null,
+              images: { jpg: { image_url: m.attributes?.posterImage?.original || null, large_image_url: m.attributes?.posterImage?.large || m.attributes?.posterImage?.original || null }, webp: { image_url: m.attributes?.posterImage?.original || null, large_image_url: m.attributes?.posterImage?.large || m.attributes?.posterImage?.original || null } },
+              type: ({ TV: "TV", movie: "Movie", OVA: "OVA", ONA: "ONA", special: "Special" } as Record<string, string>)[m.attributes?.showType] || m.attributes?.showType || null,
+              episodes: m.attributes?.episodeCount || null,
+              status: ({ current: "Currently Airing", finished: "Completed", upcoming: "Not yet aired" } as Record<string, string>)[m.attributes?.status] || m.attributes?.status || null,
+              score: m.attributes?.averageRating ? parseFloat(m.attributes.averageRating) / 10 : null,
+              scored_by: null, rank: null, popularity: m.attributes?.userCount || null, members: null, favorites: null,
+              synopsis: m.attributes?.synopsis || null,
+              season: current ? current.charAt(0).toUpperCase() + current.slice(1) : null,
+              year: year,
+              aired: { from: m.attributes?.startDate || null, to: m.attributes?.endDate || null, string: `${current} ${year}` },
+              broadcast: null,
+              studios: (m.relationships?.mediaProductions?.data || []).map((s: any) => ({ mal_id: -1, name: s.id })),
+              genres: (m.attributes?.categories || []).map((g: any) => ({ mal_id: -1, name: g.attributes?.title || g.id })),
+              themes: [], source: null, rating: m.attributes?.ageRating || null, duration: m.attributes?.episodeLength ? `${m.attributes.episodeLength} min` : null,
+              trailer: null, relations: [],
+            }));
+            const result = { data: items };
+            setCache(cacheKey, result, 600000);
+            return res.status(200).json(result);
+          } catch (e) { console.error(`[seasonal] Kitsu failed:`, e); }
+        }
       }
     }
 
     if (apiPath === "/anime/upcoming") {
       const { next, nextYear } = getSeason();
+      const cacheKey = `upcoming:${nextYear}:${next}`;
+      const cached = getCached(cacheKey);
+      if (cached) return res.status(200).json(cached);
+
       try {
         const data = await malFetch<{ data: { node?: Record<string, unknown> }[] }>(`/anime/seasonal/${nextYear}/${next}?limit=100&fields=${LIST_FIELDS}`, malClientId);
         const items = extractNodes(data);
-        return res.status(200).json({ data: items.map(normalizeMal) });
+        const result = { data: items.map(normalizeMal) };
+        setCache(cacheKey, result, 600000);
+        return res.status(200).json(result);
       } catch (err) {
-        const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${nextYear}/${next}?limit=25`);
-        return res.status(200).json({ data: data.data.map(normalizeMal) });
+        try {
+          const data = await jikanFetch<{ data: Record<string, unknown>[] }>(`/seasons/${nextYear}/${next}?limit=25`);
+          const result = { data: data.data.map(normalizeMal) };
+          setCache(cacheKey, result, 600000);
+          return res.status(200).json(result);
+        } catch (err2) {
+          try {
+            const seasonUpper = next.toUpperCase();
+            const alQuery = `query ($season: MediaSeason, $year: Int) { Page(page: 1, perPage: 25) { media(season: $season, seasonYear: $year, type: ANIME, sort: POPULARITY_DESC, isAdult: false) { id idMal title { romaji english native } coverImage { large extraLarge } bannerImage format episodes status averageScore popularity description season seasonYear startDate { year month day } genres studios(isMain: true) { nodes { id name } } trailer { id site } rankings { rank type } } } }`;
+            const alFetch = makeAniListFetch(alQuery, { season: seasonUpper, year: nextYear });
+            const alRes = await alFetch();
+            if (alRes.ok) {
+              const alBody = await alRes.json() as any;
+              if (!alBody.errors && alBody?.data?.Page?.media) {
+                const items = alBody.data.Page.media.map((m: any) => ({
+                  mal_id: m.idMal || m.id,
+                  title: m.title?.english || m.title?.romaji || "Unknown",
+                  title_english: m.title?.english || null,
+                  title_japanese: m.title?.native || null,
+                  images: { jpg: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null }, webp: { image_url: m.coverImage?.large || null, large_image_url: m.coverImage?.extraLarge || m.coverImage?.large || null } },
+                  type: m.format ? ({ TV: "TV", MOVIE: "Movie", OVA: "OVA", ONA: "ONA", SPECIAL: "Special", TV_SHORT: "TV", MUSIC: "Music" } as Record<string, string>)[m.format] || m.format : null,
+                  episodes: m.episodes || null,
+                  status: m.status ? ({ RELEASING: "Currently Airing", FINISHED: "Completed", NOT_YET_RELEASED: "Not yet aired", CANCELLED: "Cancelled", HIATUS: "Hiatus" } as Record<string, string>)[m.status] || m.status : null,
+                  score: m.averageScore ? m.averageScore / 10 : null,
+                  scored_by: null, rank: null, popularity: m.popularity || null, members: null, favorites: null,
+                  synopsis: m.description ? m.description.replace(/<[^>]*>/g, "") : null,
+                  season: m.season ? m.season.charAt(0) + m.season.slice(1).toLowerCase() : null,
+                  year: m.seasonYear || null,
+                  aired: { from: null, to: null, string: "?" },
+                  broadcast: null,
+                  studios: (m.studios?.nodes || []).map((s: any) => ({ mal_id: s.id, name: s.name })),
+                  genres: (m.genres || []).map((g: string) => ({ mal_id: -1, name: g })),
+                  themes: [], source: null, rating: null, duration: null,
+                  trailer: m.trailer?.site === "youtube" ? { youtube_id: m.trailer.id, url: `https://www.youtube.com/watch?v=${m.trailer.id}` } : null,
+                  relations: [],
+                }));
+                const result = { data: items };
+                setCache(cacheKey, result, 600000);
+                return res.status(200).json(result);
+              }
+            }
+          } catch (e) { console.error(`[upcoming] AniList failed:`, e); }
+
+          try {
+            const kitsuData = await kitsuFetch<{ data: any[] }>(`/anime?filter[seasonYear]=${nextYear}&filter[season]=${next}&page[limit]=25&sort=-userCount`);
+            const items = (kitsuData.data || []).map((m: any) => ({
+              mal_id: parseInt(m.id) || 0,
+              title: m.attributes?.titles?.en_jp || m.attributes?.canonicalTitle || "Unknown",
+              title_english: m.attributes?.titles?.en || null,
+              title_japanese: m.attributes?.titles?.ja_jp || null,
+              images: { jpg: { image_url: m.attributes?.posterImage?.original || null, large_image_url: m.attributes?.posterImage?.large || m.attributes?.posterImage?.original || null }, webp: { image_url: m.attributes?.posterImage?.original || null, large_image_url: m.attributes?.posterImage?.large || m.attributes?.posterImage?.original || null } },
+              type: ({ TV: "TV", movie: "Movie", OVA: "OVA", ONA: "ONA", special: "Special" } as Record<string, string>)[m.attributes?.showType] || m.attributes?.showType || null,
+              episodes: m.attributes?.episodeCount || null,
+              status: ({ current: "Currently Airing", finished: "Completed", upcoming: "Not yet aired" } as Record<string, string>)[m.attributes?.status] || m.attributes?.status || null,
+              score: m.attributes?.averageRating ? parseFloat(m.attributes.averageRating) / 10 : null,
+              scored_by: null, rank: null, popularity: m.attributes?.userCount || null, members: null, favorites: null,
+              synopsis: m.attributes?.synopsis || null,
+              season: next ? next.charAt(0).toUpperCase() + next.slice(1) : null,
+              year: nextYear,
+              aired: { from: null, to: null, string: `${next} ${nextYear}` },
+              broadcast: null,
+              studios: [],
+              genres: (m.attributes?.categories || []).map((g: any) => ({ mal_id: -1, name: g.attributes?.title || g.id })),
+              themes: [], source: null, rating: m.attributes?.ageRating || null, duration: m.attributes?.episodeLength ? `${m.attributes.episodeLength} min` : null,
+              trailer: null, relations: [],
+            }));
+            const result = { data: items };
+            setCache(cacheKey, result, 600000);
+            return res.status(200).json(result);
+          } catch (e) { console.error(`[upcoming] Kitsu failed:`, e); }
+        }
       }
     }
 
