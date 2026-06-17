@@ -2,6 +2,7 @@ export interface Anime {
   mal_id: number;
   anilist_id?: number;
   banner_image?: string;
+  airing_episode?: number | null;
   title: string;
   title_english: string | null;
   title_japanese: string | null;

@@ -12,16 +12,15 @@ export function RelatedAnime({ anime }: RelatedAnimeProps) {
   if (anime.length === 0) return null;
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {anime.map((item) => (
-        <div key={item.mal_id} className="flex-shrink-0 w-[160px] md:w-[180px]">
-          <AnimeCard
-            anime={item}
-            onAddToWatchlist={(_malId) => {
-              toggleWatchlist({ malId: item.mal_id, title: item.title_english || item.title, image: item.images.jpg?.image_url || '' });
-            }}
-          />
-        </div>
+        <AnimeCard
+          key={item.mal_id}
+          anime={item}
+          onAddToWatchlist={(_malId) => {
+            toggleWatchlist({ malId: item.mal_id, title: item.title_english || item.title, image: item.images.jpg?.image_url || '' });
+          }}
+        />
       ))}
     </div>
   );

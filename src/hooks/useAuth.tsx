@@ -28,15 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(u);
         setLoading(false);
 
-        try {
-          const snapshot = await getDocs(collection(db, 'users', u.uid, 'watchlist'));
-          const list: any[] = [];
-          snapshot.forEach((doc) => {
-            list.push(doc.data());
-          });
-          useUserStore.getState().setWatchlist(list);
-        } catch (e) {
-          console.error('Error loading watchlist from Firestore:', e);
+        if (db) {
+          try {
+            const snapshot = await getDocs(collection(db, 'users', u.uid, 'watchlist'));
+            const list: any[] = [];
+            snapshot.forEach((doc) => {
+              list.push(doc.data());
+            });
+            useUserStore.getState().setWatchlist(list);
+          } catch (e) {
+            console.error('Error loading watchlist from Firestore:', e);
+          }
         }
       } else {
         setUser(null);

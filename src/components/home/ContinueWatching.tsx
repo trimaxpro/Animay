@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Clock, Film } from 'lucide-react';
+import { Play, Clock, Film, Trash2 } from 'lucide-react';
 import { ScrollableRow } from '@/components/ui/ScrollableRow';
 import { useWatchHistory } from '@/hooks/useWatchHistory';
 
 export function ContinueWatching() {
-  const { watchHistory } = useWatchHistory();
+  const { watchHistory, clearWatchHistory } = useWatchHistory();
+  const [confirming, setConfirming] = useState(false);
 
   const uniqueAnime = watchHistory.reduce(
     (acc, h) => {
@@ -23,10 +25,38 @@ export function ContinueWatching() {
 
   return (
     <section className="py-6 px-4 max-w-7xl mx-auto">
-      <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary mb-4 flex items-center gap-2">
-        <Clock className="w-5 h-5 text-accent-glow stroke-[1.5]" />
-        Continue Watching
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-display font-bold text-xl md:text-2xl text-text-primary flex items-center gap-2">
+          <Clock className="w-5 h-5 text-accent-glow stroke-[1.5]" />
+          Continue Watching
+        </h2>
+        {confirming ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-muted">Clear all?</span>
+            <button
+              onClick={() => { clearWatchHistory(); setConfirming(false); }}
+              className="text-xs px-2 py-1 rounded bg-accent-rose/20 text-accent-rose hover:bg-accent-rose/30 transition-colors"
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setConfirming(false)}
+              className="text-xs px-2 py-1 rounded bg-elevated text-text-secondary hover:text-text-primary transition-colors"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirming(true)}
+            className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent-rose transition-colors"
+            title="Clear watch history"
+          >
+            <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
+            Clear
+          </button>
+        )}
+      </div>
       <ScrollableRow>
         {entries.map((entry, i) => (
           <motion.div

@@ -54,13 +54,14 @@ export function useAnimeDetail(id: number) {
   });
 }
 
-export function useAnimeEpisodes(id: number) {
+export function useAnimeEpisodes(id: number, refetchInterval?: number) {
   return useQuery({
     queryKey: ['anime', 'episodes', id],
     queryFn: () => animeApi.getAnimeEpisodes(id),
     staleTime: 5 * 60 * 1000,
     enabled: !!id,
     retry: 3,
+    refetchInterval,
   });
 }
 

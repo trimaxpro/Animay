@@ -112,7 +112,7 @@ export function VideoPlayer({ src, embedUrl, onEnded, skipTimes }: VideoPlayerPr
         <iframe
           src={embedUrl}
           className="w-full h-full"
-          allow="autoplay; fullscreen; picture-in-picture"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           allowFullScreen
           referrerPolicy="origin"
           title="Video player"

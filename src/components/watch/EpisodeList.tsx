@@ -1,8 +1,8 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import { Badge } from '@/components/ui/Badge';
-import { useWatchHistory } from '@/hooks/useWatchHistory';
 import { cn } from '@/utils/cn';
 import type { Episode } from '@/types/anime';
 
@@ -10,17 +10,24 @@ interface EpisodeListProps {
   animeId: number;
   episodes: Episode[];
   currentEpisode: number;
+  isAiring?: boolean;
 }
 
-export function EpisodeList({ animeId, episodes, currentEpisode }: EpisodeListProps) {
-  const { getProgress } = useWatchHistory();
+export function EpisodeList({ animeId, episodes, currentEpisode, isAiring }: EpisodeListProps) {
+  const visibleEpisodes = useMemo(() => {
+    if (!isAiring) return episodes;
+    return episodes.filter((ep) => ep.aired !== null && ep.aired !== '');
+  }, [episodes, isAiring]);
 
   return (
     <ScrollArea className="h-[400px]">
       <div className="space-y-1">
-        {episodes.map((ep) => {
-          const progress = getProgress(animeId, ep.episode);
-          const watched = progress > 0.9;
+        {visibleEpisodes.length === 0 && (
+          <div className="text-center py-8 text-text-muted text-sm">
+            No episodes have aired yet
+          </div>
+        )}
+        {visibleEpisodes.map((ep) => {
           const isCurrent = ep.episode === currentEpisode;
 
           return (

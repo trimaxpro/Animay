@@ -14,4 +14,14 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+function initDb() {
+  try {
+    return getFirestore(app);
+  } catch (e) {
+    console.warn('Firestore initialization failed. Watchlist sync will be unavailable.', e);
+    return null;
+  }
+}
+
+export const db = initDb();

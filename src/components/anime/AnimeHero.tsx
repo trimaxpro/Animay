@@ -118,7 +118,7 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
                     if (!currentStatus) {
                       return (
                         <>
-                          <BookmarkPlus className="w-5 h-5" />
+                          <BookmarkPlus className="w-6 h-6" />
                           <span>Add to List</span>
                         </>
                       );
@@ -128,19 +128,19 @@ export function AnimeHero({ anime }: AnimeHeroProps) {
                       const Icon = option.icon;
                       return (
                         <>
-                          <Icon className="w-5 h-5 text-accent-glow" />
+                          <Icon className="w-6 h-6 text-accent-glow" />
                           <span>{option.label}</span>
                         </>
                       );
                     }
                     return (
                       <>
-                        <BookmarkPlus className="w-5 h-5" />
+                        <BookmarkPlus className="w-6 h-6" />
                         <span>In List</span>
                       </>
                     );
                   })()}
-                  <ChevronDown className="w-5 h-5 ml-auto text-text-muted transition-transform duration-200" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none' }} />
+                  <ChevronDown className="w-5 h-5 ml-auto text-white transition-transform duration-200" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none' }} />
                 </Button>
 
                 {dropdownOpen && (

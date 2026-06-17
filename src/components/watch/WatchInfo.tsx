@@ -22,16 +22,18 @@ interface WatchInfoProps {
   episode: Episode;
   totalEpisodes: number;
   currentEpisode: number;
+  maxEpisode?: number;
   description: string | null;
 }
 
-export function WatchInfo({ animeId, animeTitle, animeImage, episode, totalEpisodes, currentEpisode, description }: WatchInfoProps) {
+export function WatchInfo({ animeId, animeTitle, animeImage, episode, totalEpisodes, currentEpisode, maxEpisode, description }: WatchInfoProps) {
   const { watchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
   const [descExpanded, setDescExpanded] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const hasPrev = currentEpisode > 1;
-  const hasNext = currentEpisode < totalEpisodes;
+  const navMax = maxEpisode ?? totalEpisodes;
+  const hasNext = currentEpisode < navMax;
   const currentEntry = watchlist.find((w) => w.malId === animeId);
   const currentStatus = currentEntry?.status;
   const descTruncated = description && description.length > 280;
@@ -91,7 +93,7 @@ export function WatchInfo({ animeId, animeTitle, animeImage, episode, totalEpiso
                   </>
                 );
               })()}
-              <ChevronDown className="w-5 h-5 ml-auto text-text-muted transition-transform duration-200" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none' }} />
+              <ChevronDown className="w-5 h-5 ml-auto text-white transition-transform duration-200" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none' }} />
             </Button>
 
             {dropdownOpen && (

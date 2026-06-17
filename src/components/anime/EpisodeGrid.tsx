@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Play, Check, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
@@ -10,10 +11,16 @@ interface EpisodeGridProps {
   episodes: Episode[];
   isLoading: boolean;
   posterImage?: string;
+  isAiring?: boolean;
 }
 
-export function EpisodeGrid({ animeId, episodes, isLoading, posterImage }: EpisodeGridProps) {
+export function EpisodeGrid({ animeId, episodes, isLoading, posterImage, isAiring }: EpisodeGridProps) {
   const { getProgress } = useWatchHistory();
+
+  const visibleEpisodes = useMemo(() => {
+    if (!isAiring) return episodes;
+    return episodes.filter((ep) => ep.aired !== null && ep.aired !== '');
+  }, [episodes, isAiring]);
 
   if (isLoading) {
     return (
@@ -27,11 +34,11 @@ export function EpisodeGrid({ animeId, episodes, isLoading, posterImage }: Episo
     );
   }
 
-  if (episodes.length === 0) return null;
+  if (visibleEpisodes.length === 0) return null;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      {episodes.map((ep) => {
+      {visibleEpisodes.map((ep) => {
         const progress = getProgress(animeId, ep.episode);
         const watched = progress > 0.9;
 

@@ -1,55 +1,13 @@
-import fs from 'fs';
-import path from 'path';
-
 const MAL_BASE = "https://api.myanimelist.net/v2";
 const JIKAN_BASE = "https://api.jikan.moe/v4";
+const KITSU_BASE = "https://kitsu.io/api/edge";
 const ANISKIP_BASE = "https://api.aniskip.com/v2";
+const ANILIST_GRAPHQL = "https://graphql.anilist.co";
+const ANIMESCHEDULE_BASE = "https://animeschedule.net/api/v3";
 
 const CORS_ORIGIN = "*";
 
 const cache = new Map<string, { data: unknown; expires: number }>();
-
-let mappingCache: Map<number, { tmdbId: number; type: 'tv' | 'movie'; season: number }> | null = null;
-
-function loadMappingCache() {
-  if (mappingCache) return mappingCache;
-  mappingCache = new Map();
-  try {
-    const filePath = path.join(process.cwd(), 'public', 'anime-list-mini.json');
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, 'utf-8');
-      const list = JSON.parse(raw) as any[];
-      for (const item of list) {
-        const malId = item.mal_id;
-        const alId = item.anilist_id;
-        const tmdb = item.themoviedb_id;
-        
-        let tmdbId = 0;
-        let type: 'tv' | 'movie' = 'tv';
-        if (tmdb) {
-          if (typeof tmdb.tv === 'number') {
-            tmdbId = tmdb.tv;
-            type = 'tv';
-          } else if (typeof tmdb.movie === 'number') {
-            tmdbId = tmdb.movie;
-            type = 'movie';
-          }
-        }
-        
-        const season = item.season?.tmdb || 1;
-        
-        if (tmdbId > 0) {
-          const val = { tmdbId, type, season };
-          if (typeof malId === 'number') mappingCache.set(malId, val);
-          if (typeof alId === 'number') mappingCache.set(alId, val);
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Failed to load mapping cache:", e);
-  }
-  return mappingCache;
-}
 
 function getCached(key: string): unknown | null {
   const entry = cache.get(key);
@@ -64,6 +22,148 @@ function setCache(key: string, data: unknown, ttlMs: number) {
     const oldest = cache.keys().next().value;
     if (oldest) cache.delete(oldest);
   }
+}
+
+// === Smart resilient fetch system ===
+
+type RateLimitState = {
+  lastRequest: number;
+  cooldownUntil: number;
+  consecutive429s: number;
+};
+
+const rateLimits: Record<string, RateLimitState> = {
+  mal:    { lastRequest: 0, cooldownUntil: 0, consecutive429s: 0 },
+  jikan:  { lastRequest: 0, cooldownUntil: 0, consecutive429s: 0 },
+  kitsu:  { lastRequest: 0, cooldownUntil: 0, consecutive429s: 0 },
+  anilist:{ lastRequest: 0, cooldownUntil: 0, consecutive429s: 0 },
+};
+
+const MIN_INTERVALS: Record<string, number> = {
+  mal:     500,
+  jikan:   400,
+  kitsu:   200,
+  anilist: 300,
+};
+
+const MAX_BACKOFF = 16000;
+
+async function rateLimitedFetch(
+  source: string,
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const state = rateLimits[source];
+  if (!state) return fetch(url, options);
+
+  // If source is in cooldown, throw immediately
+  if (state.cooldownUntil > Date.now()) {
+    throw new Error(`${source} in cooldown for ${state.cooldownUntil - Date.now()}ms`);
+  }
+
+  // Enforce minimum interval between requests
+  const elapsed = Date.now() - state.lastRequest;
+  if (elapsed < MIN_INTERVALS[source]) {
+    await new Promise(r => setTimeout(r, MIN_INTERVALS[source] - elapsed));
+  }
+
+  state.lastRequest = Date.now();
+  let attempt = 0;
+
+  while (attempt < 3) {
+    attempt++;
+    try {
+      const res = await fetch(url, options);
+
+      if (res.status === 429) {
+        state.consecutive429s++;
+        const backoff = Math.min(1000 * Math.pow(2, state.consecutive429s - 1), MAX_BACKOFF);
+        state.cooldownUntil = Date.now() + backoff + Math.random() * 1000;
+        throw new Error(`${source} rate limited (429), cooling down for ${backoff}ms`);
+      }
+
+      state.consecutive429s = 0;
+      return res;
+    } catch (err) {
+      // Retry on transient network errors (not 429, which is already handled)
+      if (attempt < 3 && err instanceof Error && !err.message.includes('rate limited')) {
+        const delay = Math.min(500 * Math.pow(2, attempt - 1) + Math.random() * 500, 4000);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(`${source} failed after ${attempt} attempts`);
+}
+
+type ApiSource = {
+  name: string;
+  fetch: () => Promise<Response>;
+  transform: (raw: any) => any;
+  validate: (raw: any) => boolean;
+};
+
+async function fetchWithFallback<T>(
+  sources: { name: string; fetch: () => Promise<Response>; transform: (raw: any) => T; validate?: (raw: any) => boolean }[],
+  cacheKey: string,
+  cacheTtl: number = 300000
+): Promise<T> {
+  const cached = getCached(cacheKey);
+  if (cached) return cached as T;
+
+  let lastError: Error | null = null;
+
+  for (const source of sources) {
+    try {
+      const res = await source.fetch();
+      if (!res.ok) {
+        if (res.status === 429) continue;
+        lastError = new Error(`${source.name} returned ${res.status}`);
+        continue;
+      }
+      const raw = await res.json();
+      if (source.validate && !source.validate(raw)) {
+        lastError = new Error(`${source.name} returned invalid data`);
+        continue;
+      }
+      const data = source.transform(raw);
+      setCache(cacheKey, data, cacheTtl);
+      return data;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // continue to next source
+    }
+  }
+
+  throw lastError || new Error("All sources exhausted");
+}
+
+function malHeaders(clientId: string) {
+  return { "X-MAL-CLIENT-ID": clientId };
+}
+
+function makeMalFetch<T>(path: string, clientId: string): () => Promise<Response> {
+  return () => rateLimitedFetch("mal", `${MAL_BASE}${path}`, { headers: malHeaders(clientId) });
+}
+
+function makeJikanFetch(path: string): () => Promise<Response> {
+  return () => rateLimitedFetch("jikan", `${JIKAN_BASE}${path}`);
+}
+
+function makeKitsuFetch(path: string): () => Promise<Response> {
+  return () => rateLimitedFetch("kitsu", `${KITSU_BASE}${path}`, {
+    headers: { "Accept": "application/vnd.api+json", "Content-Type": "application/vnd.api+json" },
+  });
+}
+
+function makeAniListFetch(query: string, variables: Record<string, any>): () => Promise<Response> {
+  return () => rateLimitedFetch("anilist", ANILIST_GRAPHQL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({ query, variables }),
+  });
 }
 
 async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; banner_image?: string; description?: string; al_trailer?: { youtube_id: string | null; url: string | null } } | null> {
@@ -82,18 +182,7 @@ async function fetchAniListInfo(malId: number): Promise<{ anilist_id?: number; b
   `;
 
   try {
-    const res = await fetch("https://graphql.anilist.co", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        variables: { idMal: malId },
-      }),
-    });
-
+    const res = await makeAniListFetch(query, { idMal: malId })();
     if (!res.ok) return null;
     const body = await res.json() as any;
     const media = body?.data?.Media;
@@ -118,27 +207,14 @@ function setCors(res: any) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
 
-function malHeaders(clientId: string) {
-  return { "X-MAL-CLIENT-ID": clientId };
-}
-
 async function malFetch<T = unknown>(path: string, clientId: string): Promise<T> {
   const cacheKey = `mal:${path}`;
   const cached = getCached(cacheKey);
   if (cached) return cached as T;
 
-  const res = await fetch(`${MAL_BASE}${path}`, { headers: malHeaders(clientId) });
-  if (!res.ok) {
-    if (res.status === 429) {
-      await new Promise(r => setTimeout(r, 1000));
-      const retryRes = await fetch(`${MAL_BASE}${path}`, { headers: malHeaders(clientId) });
-      if (!retryRes.ok) throw new Error(`MAL API error: ${retryRes.status}`);
-      const retryData = await retryRes.json() as T;
-      setCache(cacheKey, retryData, 300000);
-      return retryData;
-    }
-    throw new Error(`MAL API error: ${res.status}`);
-  }
+  const fetcher = makeMalFetch(path, clientId);
+  const res = await fetcher();
+  if (!res.ok) throw new Error(`MAL API error: ${res.status}`);
   const data = await res.json() as T;
   setCache(cacheKey, data, 300000);
   return data;
@@ -149,21 +225,24 @@ async function jikanFetch<T = unknown>(path: string): Promise<T> {
   const cached = getCached(cacheKey);
   if (cached) return cached as T;
 
-  await new Promise(r => setTimeout(r, 350));
-  const res = await fetch(`${JIKAN_BASE}${path}`);
-  if (!res.ok) {
-    if (res.status === 429) {
-      await new Promise(r => setTimeout(r, 1000));
-      const retryRes = await fetch(`${JIKAN_BASE}${path}`);
-      if (!retryRes.ok) throw new Error(`Jikan error: ${retryRes.status}`);
-      const retryData = await retryRes.json() as T;
-      setCache(cacheKey, retryData, 300000);
-      return retryData;
-    }
-    throw new Error(`Jikan error: ${res.status}`);
-  }
+  const fetcher = makeJikanFetch(path);
+  const res = await fetcher();
+  if (!res.ok) throw new Error(`Jikan error: ${res.status}`);
   const data = await res.json() as T;
   setCache(cacheKey, data, 300000);
+  return data;
+}
+
+async function kitsuFetch<T = unknown>(path: string): Promise<T> {
+  const cacheKey = `kitsu:${path}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached as T;
+
+  const fetcher = makeKitsuFetch(path);
+  const res = await fetcher();
+  if (!res.ok) throw new Error(`Kitsu error: ${res.status}`);
+  const data = await res.json() as T;
+  setCache(cacheKey, data, 600000);
   return data;
 }
 
@@ -293,27 +372,6 @@ function normalizeMal(item: Record<string, unknown>): Record<string, unknown> {
       };
     }),
   };
-}
-
-function parseRecs(item: Record<string, unknown>): Record<string, unknown>[] {
-  const rawRecs = item.recommendations as Array<Record<string, unknown>> || [];
-  return rawRecs.slice(0, 10).map((r: Record<string, unknown>) => {
-    const rn = r.node as Record<string, unknown> || {};
-    const rmp = rn.main_picture as Record<string, string | null> || {};
-    return {
-      entry: {
-        mal_id: rn.id as number,
-        title: rn.title as string || "Unknown",
-        title_english: null, title_japanese: null,
-        images: { jpg: { image_url: rmp.medium || null, large_image_url: rmp.large || rmp.medium || null }, webp: { image_url: rmp.medium || null, large_image_url: rmp.large || rmp.medium || null } },
-        type: rn.media_type ? malMediaType(rn.media_type as string) : null,
-        episodes: null, status: null, score: rn.mean as number || null,
-        scored_by: null, rank: null, popularity: null, members: null, favorites: null, synopsis: null,
-        season: null, year: null, aired: { from: null, to: null, string: "?" }, broadcast: null,
-        studios: [], genres: [], themes: [], source: null, rating: null, duration: null, trailer: null, relations: [],
-      },
-    };
-  });
 }
 
 function parseChars(item: Record<string, unknown>): Record<string, unknown>[] {
@@ -530,13 +588,6 @@ export default async function handler(req: any, res: any) {
           normalized.trailer = alInfo.al_trailer;
         }
       }
-      const mappings = loadMappingCache();
-      const mapVal = mappings.get(normalized.mal_id) || (normalized.anilist_id ? mappings.get(normalized.anilist_id) : null);
-      if (mapVal) {
-        normalized.tmdb_id = mapVal.tmdbId;
-        normalized.tmdb_type = mapVal.type;
-        normalized.tmdb_season = mapVal.season;
-      }
 
       setCache(cacheKey, normalized, 600000);
       return res.status(200).json(normalized);
@@ -545,23 +596,96 @@ export default async function handler(req: any, res: any) {
     const episodesMatch = apiPath.match(/^\/anime\/(\d+)\/episodes$/);
     if (episodesMatch) {
       const id = episodesMatch[1];
+      const malId = parseInt(id);
 
       let episodes: Record<string, unknown>[] = [];
       let totalEpisodes: number | null = null;
 
+      // 1. AniList: best air dates via airingSchedule
       try {
-        const epData = await jikanFetch<{ data: Record<string, unknown>[] }>(`/anime/${id}/episodes`);
-        episodes = (epData.data || []).map((ep: Record<string, unknown>) => ({
-          ...ep,
-          episode: ep.mal_id ?? ep.episode,
-        }));
+        const alQuery = `
+          query ($idMal: Int) {
+            Media(idMal: $idMal, type: ANIME) {
+              id
+              episodes
+              airingSchedule(perPage: 50) {
+                nodes {
+                  episode
+                  airingAt
+                }
+              }
+            }
+          }
+        `;
+        const alRes = await fetch("https://graphql.anilist.co", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ query: alQuery, variables: { idMal: malId } }),
+        });
+
+        if (alRes.ok) {
+          const alBody = await alRes.json() as any;
+          const media = alBody?.data?.Media;
+          if (media) {
+            const schedule = media.airingSchedule?.nodes || [];
+            const now = Math.floor(Date.now() / 1000);
+
+            episodes = schedule.map((s: any) => ({
+              mal_id: s.episode,
+              title: `Episode ${s.episode}`,
+              episode: s.episode,
+              aired: s.airingAt <= now ? new Date(s.airingAt * 1000).toISOString() : null,
+              filler: false,
+              recap: false,
+              forum_url: null,
+            }));
+
+            totalEpisodes = (media.episodes as number) || null;
+          }
+        }
       } catch {}
 
-      try {
-        const detailData = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=num_episodes`, malClientId);
-        totalEpisodes = detailData.num_episodes as number | null;
-      } catch {}
+      // 2. Always try MAL for totalEpisodes (most reliable count)
+      if (!totalEpisodes) {
+        try {
+          const detailData = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=num_episodes`, malClientId);
+          totalEpisodes = detailData.num_episodes as number | null;
+        } catch {}
+      }
 
+      // 3. If AniList returned nothing, try Kitsu (10k req/day, no auth)
+      if (episodes.length === 0) {
+        try {
+          const kitsuMap = await kitsuFetch<{ data: { id: string }[] }>(`/anime?filter[malId]=${malId}&page[limit]=1`);
+          const kitsuId = kitsuMap.data?.[0]?.id;
+          if (kitsuId) {
+            const epData = await kitsuFetch<{ data: any[] }>(`/anime/${kitsuId}/episodes?page[limit]=200&sort=number`);
+            const now = new Date();
+            episodes = (epData.data || []).map((ep: any) => ({
+              mal_id: ep.attributes.number,
+              title: ep.attributes.titles?.en_us || ep.attributes.titles?.en_jp || ep.attributes.canonicalTitle || `Episode ${ep.attributes.number}`,
+              episode: ep.attributes.number,
+              aired: ep.attributes.airdate && new Date(ep.attributes.airdate) <= now ? new Date(ep.attributes.airdate).toISOString() : null,
+              filler: ep.attributes.filler || false,
+              recap: ep.attributes.recap || false,
+              forum_url: null,
+            }));
+          }
+        } catch {}
+      }
+
+      // 4. If still no episodes, try Jikan
+      if (episodes.length === 0) {
+        try {
+          const epData = await jikanFetch<{ data: Record<string, unknown>[] }>(`/anime/${id}/episodes`);
+          episodes = (epData.data || []).map((ep: Record<string, unknown>) => ({
+            ...ep,
+            episode: ep.mal_id ?? ep.episode,
+          }));
+        } catch {}
+      }
+
+      // 5. Try Jikan for totalEpisodes if still unknown
       if (!totalEpisodes) {
         try {
           const jikanDetail = await jikanFetch<{ data: Record<string, unknown> }>(`/anime/${id}`);
@@ -569,6 +693,12 @@ export default async function handler(req: any, res: any) {
         } catch {}
       }
 
+      // 6. Derive total from max episode as last resort
+      if (!totalEpisodes && episodes.length > 0) {
+        totalEpisodes = Math.max(...episodes.map((ep: Record<string, unknown>) => ep.episode as number));
+      }
+
+      // 7. Fill in missing episodes so front-end knows the full range
       if (totalEpisodes) {
         const existingNums = new Set(episodes.map((ep: Record<string, unknown>) => ep.episode as number));
         for (let i = 1; i <= totalEpisodes; i++) {
@@ -611,36 +741,28 @@ export default async function handler(req: any, res: any) {
       const cached = getCached(cacheKey);
       if (cached) return res.status(200).json(cached);
 
-      try {
-        const data = await malFetch<Record<string, unknown>>(`/anime/${id}?fields=recommendations`, malClientId);
-        const recs = parseRecs(data);
-        const result = { data: recs };
-        setCache(cacheKey, result, 600000);
-        return res.status(200).json(result);
-      } catch (err) {
-        const data = await jikanFetch<{ data: any[] }>(`/anime/${id}/recommendations`);
-        const recs = (data.data || []).slice(0, 10).map((r: any) => {
-          const entry = r.entry || {};
-          return {
-            entry: {
-              mal_id: entry.mal_id,
-              title: entry.title || "Unknown",
-              title_english: null, title_japanese: null,
-              images: {
-                jpg: { image_url: entry.images?.jpg?.image_url || null, large_image_url: entry.images?.jpg?.large_image_url || null },
-                webp: { image_url: entry.images?.webp?.image_url || null, large_image_url: entry.images?.webp?.large_image_url || null }
-              },
-              type: null, episodes: null, status: null, score: null,
-              scored_by: null, rank: null, popularity: null, members: null, favorites: null, synopsis: null,
-              season: null, year: null, aired: { from: null, to: null, string: "?" }, broadcast: null,
-              studios: [], genres: [], themes: [], source: null, rating: null, duration: null, trailer: null, relations: []
-            }
-          };
-        });
-        const result = { data: recs };
-        setCache(cacheKey, result, 600000);
-        return res.status(200).json(result);
-      }
+      const data = await jikanFetch<{ data: any[] }>(`/anime/${id}/recommendations`);
+      const recs = (data.data || []).map((r: any) => {
+        const entry = r.entry || {};
+        return {
+          entry: {
+            mal_id: entry.mal_id,
+            title: entry.title || "Unknown",
+            title_english: null, title_japanese: null,
+            images: {
+              jpg: { image_url: entry.images?.jpg?.image_url || null, large_image_url: entry.images?.jpg?.large_image_url || null },
+              webp: { image_url: entry.images?.webp?.image_url || null, large_image_url: entry.images?.webp?.large_image_url || null }
+            },
+            type: null, episodes: null, status: null, score: null,
+            scored_by: null, rank: null, popularity: null, members: null, favorites: null, synopsis: null,
+            season: null, year: null, aired: { from: null, to: null, string: "?" }, broadcast: null,
+            studios: [], genres: [], themes: [], source: null, rating: null, duration: null, trailer: null, relations: []
+          }
+        };
+      });
+      const result = { data: recs };
+      setCache(cacheKey, result, 600000);
+      return res.status(200).json(result);
     }
 
     if (apiPath === "/search") {
@@ -820,13 +942,213 @@ export default async function handler(req: any, res: any) {
         }
       } catch {}
 
-      return res.status(502).json({ error: true, code: "UPSTREAM_ERROR", message: "AniList browse failed", retry: true });
+      // Fallback to Jikan if AniList fails
+      try {
+        let jikanPath = "/anime";
+        const jikanParams = new URLSearchParams();
+        jikanParams.set("page", String(bPage));
+        jikanParams.set("limit", String(bLimit));
+
+        if (bParams.get("type")) {
+          const typeMap: Record<string, string> = { TV: "tv", Movie: "movie", OVA: "ova", ONA: "ona", Special: "special", Music: "music" };
+          jikanParams.set("type", typeMap[bParams.get("type")!] || bParams.get("type")!.toLowerCase());
+        }
+        if (bParams.get("status")) {
+          const statusMap: Record<string, string> = { airing: "airing", completed: "complete", upcoming: "upcoming" };
+          jikanParams.set("status", statusMap[bParams.get("status")!.toLowerCase()] || bParams.get("status")!.toLowerCase());
+        }
+        if (bParams.get("genres")) {
+          jikanParams.set("genres", bParams.get("genres")!);
+        }
+        if (bParams.get("sort") === "score") {
+          jikanParams.set("order_by", "score");
+          jikanParams.set("sort", "desc");
+        } else if (bParams.get("sort") === "popularity") {
+          jikanParams.set("order_by", "members");
+          jikanParams.set("sort", "desc");
+        } else if (bParams.get("sort") === "start_date") {
+          jikanParams.set("order_by", "start_date");
+          jikanParams.set("sort", "desc");
+        }
+
+        const searchQ = bParams.get("q");
+        if (searchQ) {
+          jikanPath = "/anime";
+          jikanParams.set("q", searchQ);
+        } else if (bParams.get("sort") === "trending") {
+          jikanPath = "/top/anime";
+          jikanParams.delete("page");
+          jikanParams.delete("limit");
+          jikanParams.set("page", String(bPage));
+          jikanParams.set("limit", String(bLimit));
+          const filterMap: Record<string, string> = { tv: "tv", movie: "movie", ova: "ova", ona: "ona", special: "special" };
+          const jType = bParams.get("type");
+          if (jType && filterMap[jType.toLowerCase()]) {
+            jikanParams.set("type", filterMap[jType.toLowerCase()]);
+          } else {
+            jikanParams.set("filter", "bypopularity");
+          }
+        }
+
+        const qs = jikanParams.toString();
+        const jikanData = await jikanFetch<{ data: Record<string, unknown>[]; pagination: Record<string, unknown> }>(`${jikanPath}${qs ? "?" + qs : ""}`);
+
+        const formatMap = (f: string): string =>
+          ({ TV: "TV", MOVIE: "Movie", OVA: "OVA", ONA: "ONA", SPECIAL: "Special", TV_SHORT: "TV", MUSIC: "Music" } as Record<string, string>)[f] || f;
+
+        const items = jikanData.data.map((m: any) => ({
+          mal_id: m.mal_id,
+          title: m.title || "Unknown",
+          title_english: m.title_english || null,
+          title_japanese: m.title_japanese || null,
+          images: {
+            jpg: { image_url: m.images?.jpg?.image_url || null, large_image_url: m.images?.jpg?.large_image_url || null },
+            webp: { image_url: m.images?.webp?.image_url || null, large_image_url: m.images?.webp?.large_image_url || null },
+          },
+          type: m.type || null,
+          episodes: m.episodes || null,
+          status: m.status || null,
+          score: m.score || null,
+          scored_by: m.scored_by || null,
+          rank: m.rank || null,
+          popularity: m.popularity || null,
+          members: m.members || null,
+          favorites: m.favorites || null,
+          synopsis: m.synopsis || null,
+          season: m.season || null,
+          year: m.year || null,
+          aired: m.aired || { from: null, to: null, string: "?" },
+          broadcast: null,
+          studios: (m.studios || []).map((s: any) => ({ mal_id: s.mal_id, name: s.name })),
+          genres: (m.genres || []).map((g: any) => ({ mal_id: g.mal_id, name: g.name })),
+          themes: [],
+          source: m.source || null,
+          rating: m.rating || null,
+          duration: m.duration || null,
+          trailer: m.trailer?.youtube_id ? { youtube_id: m.trailer.youtube_id, url: m.trailer.url } : null,
+          relations: [],
+        }));
+
+        return res.status(200).json({
+          data: items,
+          pagination: {
+            has_next_page: jikanData.pagination?.has_next_page || false,
+            current_page: bPage,
+            per_page: bLimit,
+          },
+        });
+      } catch {}
+
+      return res.status(502).json({ error: true, code: "UPSTREAM_ERROR", message: "Browse failed", retry: true });
     }
 
     if (apiPath.startsWith("/schedule/")) {
       const day = apiPath.replace("/schedule/", "");
-      const data = await jikanFetch<Record<string, unknown>>(`/schedules?filter=${day}&limit=25`);
-      return res.status(200).json(data);
+      const dayCacheKey = `schedule:${day}`;
+      const cached = getCached(dayCacheKey);
+      if (cached) return res.status(200).json(cached);
+
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const targetDayIndex = dayNames.indexOf(day.toLowerCase());
+      if (targetDayIndex < 0) return res.status(200).json({ data: [] });
+
+      try {
+        // Fetch all ongoing anime from AnimeSchedule
+        const allCacheKey = "animeschedule:ongoing";
+        let allAnime: any[] = getCached(allCacheKey) as any[] || [];
+        if (!allAnime.length) {
+          const firstRes = await fetch(`${ANIMESCHEDULE_BASE}/anime?page=1&airing-statuses=ongoing&st=popularity`, {
+            headers: { "Accept": "application/json", "User-Agent": "MikuAnime/1.0" },
+          });
+          if (!firstRes.ok) throw new Error(`AnimeSchedule returned ${firstRes.status}`);
+          const firstPage = await firstRes.json() as any;
+          allAnime = firstPage.anime || [];
+          const total = firstPage.totalAmount || 0;
+          const totalPages = Math.ceil(total / 18);
+
+          // Fetch remaining pages in parallel
+          if (totalPages > 1) {
+            const pages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+            const pageResults = await Promise.allSettled(
+              pages.map(p => 
+                fetch(`${ANIMESCHEDULE_BASE}/anime?page=${p}&airing-statuses=ongoing&st=popularity`, {
+                  headers: { "Accept": "application/json", "User-Agent": "MikuAnime/1.0" },
+                }).then(r => r.json()).then(d => d.anime || [])
+              )
+            );
+            for (const r of pageResults) {
+              if (r.status === 'fulfilled') allAnime.push(...r.value);
+            }
+          }
+          setCache(allCacheKey, allAnime, 600000); // cache all for 10 min
+        }
+
+        // Filter by day of week
+        const items = allAnime
+          .filter((a: any) => {
+            if (!a.jpnTime) return false;
+            const d = new Date(a.jpnTime);
+            return d.getDay() === targetDayIndex;
+          })
+          .map((a: any) => {
+            const airDate = new Date(a.jpnTime);
+            const malUrl = a.websites?.mal || '';
+            const malMatch = malUrl.match(/\/(\d+)(?:\/|$)/);
+            const malId = malMatch ? parseInt(malMatch[1]) : null;
+            const imgPath = a.imageVersionRoute || `anime/jpg/default/${a.route}.jpg`;
+            const imgUrl = `https://img.animeschedule.net/production/assets/public/img/${imgPath}`;
+
+            // Calculate current episode from premiere date for weekly shows
+            let airingEpisode: number | null = null;
+            if (a.premier && a.status === 'Ongoing') {
+              const premierDate = new Date(a.premier);
+              const now = new Date();
+              const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+              const weeksSince = Math.floor((now.getTime() - premierDate.getTime()) / msPerWeek);
+              airingEpisode = Math.max(1, weeksSince + 1);
+              if (a.episodes) airingEpisode = Math.min(airingEpisode, a.episodes);
+            }
+
+            return {
+              mal_id: malId || a.route,
+              airing_episode: airingEpisode,
+              title: a.names?.english || a.title || a.names?.romaji || "Unknown",
+              title_english: a.names?.english || null,
+              title_japanese: a.names?.native || null,
+              images: {
+                jpg: { image_url: imgUrl, large_image_url: imgUrl },
+                webp: { image_url: imgUrl, large_image_url: imgUrl },
+              },
+              type: a.mediaTypes?.[0]?.name || null,
+              episodes: a.episodes || null,
+              status: a.status || null,
+              score: a.stats?.averageScore ? a.stats.averageScore / 10 : null,
+              scored_by: a.stats?.ratingCount || null,
+              rank: null, popularity: a.stats?.trackedRating || null,
+              members: a.stats?.trackedCount || null,
+              favorites: null,
+              synopsis: a.description ? a.description.replace(/<[^>]*>/g, "").slice(0, 500) : null,
+              season: a.season?.season || null,
+              year: a.season?.year ? parseInt(a.season.year) : null,
+              aired: { from: a.premier || null, to: null, string: a.premier ? new Date(a.premier).toLocaleDateString() : "?" },
+              broadcast: { day: airDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase(), time: airDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Tokyo' }) },
+              studios: (a.studios || []).map((s: any) => ({ mal_id: -1, name: s.name })),
+              genres: (a.genres || []).map((g: any) => ({ mal_id: -1, name: g.name })),
+              themes: [], source: a.sources?.[0]?.name || null,
+              rating: null,
+              duration: a.lengthMin ? `${a.lengthMin} min per ep` : null,
+              trailer: null, relations: [],
+            };
+          })
+          .sort((a: any, b: any) => (a.broadcast?.time || '').localeCompare(b.broadcast?.time || ''));
+
+        const result = { data: items };
+        setCache(dayCacheKey, result, 300000);
+        return res.status(200).json(result);
+      } catch (err) {
+        const lastError = err instanceof Error ? err.message : "Schedule fetch failed";
+        return res.status(200).json({ data: [], error: lastError });
+      }
     }
 
     if (apiPath === "/genres") {

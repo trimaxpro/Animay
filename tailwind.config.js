@@ -4,18 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        void: '#191919',
-        surface: '#1F1F1F',
-        elevated: '#2A2A2A',
-        'accent-primary': '#3B82F6',
-        'accent-glow': '#60A5FA',
+        void: '#000000',
+        surface: '#0A0A0A',
+        elevated: '#141414',
+        'accent-primary': '#39C5CF',
+        'accent-glow': '#6CD9E0',
         'accent-rose': '#F43F5E',
         'accent-amber': '#F59E0B',
-        'text-primary': '#EBEBEB',
-        'text-secondary': '#9B9B9B',
-        'text-muted': '#5E5E5E',
-        'border-subtle': '#333333',
-        'border-glow': 'rgba(59,130,246,0.3)',
+        'text-primary': '#FAFAFA',
+        'text-secondary': '#A0A0A0',
+        'text-muted': '#555555',
+        'border-subtle': '#1F1F1F',
+        'border-glow': 'rgba(57,197,207,0.3)',
       },
       fontFamily: {
         display: ['Oswald', 'Inter', 'sans-serif'],
@@ -30,8 +30,8 @@ export default {
         hero: '16px',
       },
       boxShadow: {
-        glow: '0 0 24px rgba(59,130,246,0.25)',
-        'glow-sm': '0 0 12px rgba(59,130,246,0.15)',
+        glow: '0 0 24px rgba(57,197,207,0.25)',
+        'glow-sm': '0 0 12px rgba(57,197,207,0.15)',
       },
       animation: {
         shimmer: 'shimmer 2s infinite linear',
